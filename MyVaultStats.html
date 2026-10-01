@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>My Vault - Stats</title>
+    <style>
+        :root {
+            --lavender-main: #a984db;
+            --lavender-dark: #8263b1;
+            --lavender-light: #f3effa;
+            --dark-bg: #2d2a32;
+            --text-main: #333;
+            --prog-color: #2ecc71;
+            --ach-done: #e66ea0;
+            --ach-pending: #aaaaaa;
+        }
+
+        /* Modification du body pour le fond spatial */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #1e1b20; /* Gris foncé */
+            margin: 0; 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Canvas pour les étoiles (Arrière-plan) */
+        #star-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Derrière tout le contenu */
+        }
+        
+        .header { background: var(--dark-bg); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); position: relative; z-index: 10; }
+        .header h1 { margin: 0; font-size: 1.5em; color: var(--lavender-main); }
+        .btn-back { background: var(--lavender-main); color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; transition: 0.2s; }
+        .btn-back:hover { background: var(--lavender-dark); }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; padding-bottom: 60px; position: relative; z-index: 10; }
+        
+        /* Grille de stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stats-grid-ach { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .stats-grid-ach .stat-card { flex: 0 1 220px; }
+        /* Légère transparence sur les cartes pour l'ambiance */
+        .stat-card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; border-top: 4px solid var(--lavender-main); display: flex; flex-direction: column; justify-content: center; backdrop-filter: blur(5px); }
+        .stat-val { font-size: 2.2em; font-weight: bold; color: var(--lavender-dark); display: block; margin-bottom: 5px; }
+        .stat-label { color: #555; font-weight: 600; text-transform: uppercase; font-size: 0.8em; letter-spacing: 1px; }
+
+        /* Section Spéciale Progression */
+        .progression-large { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-bottom: 30px; text-align: center; backdrop-filter: blur(5px); }
+        .prog-bar-container { background: #ddd; height: 25px; border-radius: 12px; margin: 20px 0; overflow: hidden; position: relative; }
+        .prog-bar-fill { height: 100%; background: linear-gradient(90deg, var(--lavender-main), var(--prog-color)); width: 0%; transition: width 1.5s ease-in-out; }
+        .prog-percent { font-size: 1.2em; font-weight: bold; color: var(--lavender-dark); }
+
+        /* Graphiques et détails */
+        .details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .details-row:last-of-type { margin-bottom: 0; }
+        .chart-container { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(5px); }
+        .chart-container.full { grid-column: 1 / -1; }
+        .pie-chart { width: 180px; height: 180px; border-radius: 50%; margin: 20px 0; border: 5px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        .legend { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 10px; }
+        .legend-item { display: flex; justify-content: space-between; font-size: 0.9em; padding: 5px 0; border-bottom: 1px solid #eee; }
+        .dot-label { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="star-canvas"></canvas>
+
+    <div class="header">
+        <h1>📊 Statistiques de la Collection</h1>
+        <a href="MyVault.html" class="btn-back">Retour au Vault</a>
+    </div>
+
+    <div class="container">
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-val" id="totalTickets">0</span>
+                <span class="stat-label">Total de Jeux Entré</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val" id="grandTotalGames">0</span>
+                <span class="stat-label">Total de Jeux inclue les sous-jeux</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val" id="totalValue">0.00 $</span>
+                <span class="stat-label">Valeur de l'inventaire</span>
+            </div>
+            <div class="stat-card" style="border-top-color: var(--prog-color);">
+                <span class="stat-val" id="avgRating">0.0 ★</span>
+                <span class="stat-label">Note Moyenne</span>
+            </div>
+        </div>
+
+        <div class="stats-grid-ach">
+            <div class="stat-card" style="border-top-color: var(--ach-done);">
+                <span class="stat-val" id="totalAchievements">0</span>
+                <span class="stat-label">Achievements Total</span>
+            </div>
+            <div class="stat-card" style="border-top-color: var(--ach-done);">
+                <span class="stat-val" id="doneAchievements">0</span>
+                <span class="stat-label">Achievements Débloqués</span>
+            </div>
+        </div>
+
+        <div class="progression-large">
+            <span class="stat-label">Progression Moyenne Globale</span>
+            <div class="prog-bar-container">
+                <div id="globalProgFill" class="prog-bar-fill"></div>
+            </div>
+            <span class="prog-percent" id="globalProgText">0%</span>
+        </div>
+
+        <div class="details-row">
+            <div class="chart-container">
+                <h3 style="margin-top:0;">Répartition par Format</h3>
+                <div id="formatPie" class="pie-chart"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="dot-label"><div class="dot" style="background:var(--lavender-dark)"></div> Physique</div>
+                        <span id="lbl-phys" style="font-weight:bold;">0</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="dot-label"><div class="dot" style="background:#aaaaaa"></div> Digital</div>
+                        <span id="lbl-digi" style="font-weight:bold;">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-top:0;">Type d'entrées</h3>
+                <div class="legend" style="margin-top:20px;">
+                    <div class="legend-item" style="padding: 15px 0;">
+                        <span style="color:#666;">Jeux Simple</span>
+                        <span id="count-simple" style="font-weight:bold; font-size: 1.2em;">0</span>
+                    </div>
+                    <div class="legend-item" style="padding: 15px 0;">
+                        <span style="color:#666;">Compilation / Collection</span>
+                        <span id="count-compil" style="font-weight:bold; font-size: 1.2em;">0</span>
+                    </div>
+                    <div class="legend-item" style="padding: 15px 0; border-bottom: none;">
+                        <span style="color:#666;">Nombre de Sous-jeux</span>
+                        <span id="count-subs" style="font-weight:bold; font-size: 1.2em;">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-row">
+            <div class="chart-container full">
+                <h3 style="margin-top:0;">Achievements Débloqués</h3>
+                <div id="achPie" class="pie-chart"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="dot-label"><div class="dot" style="background:var(--ach-done)"></div> Débloqués</div>
+                        <span id="lbl-ach-done" style="font-weight:bold;">0</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="dot-label"><div class="dot" style="background:var(--ach-pending)"></div> Restants</div>
+                        <span id="lbl-ach-left" style="font-weight:bold;">0</span>
+                    </div>
+                    <div class="legend-item" style="border-bottom: none;">
+                        <div class="dot-label"><div class="dot" style="background:var(--lavender-main)"></div> Total</div>
+                        <span id="lbl-ach-total" style="font-weight:bold;">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. CALCULS STATISTIQUES OPTIMISÉS ---
+        const db = JSON.parse(localStorage.getItem('MyVault_DB')) || [];
+        
+        // Réduction unique avec tous les calculs
+        const stats = db.reduce((acc, g) => {
+            acc.totalValue += parseFloat(g.price) || 0;
+            acc.totalRating += g.rating > 0 ? g.rating : 0;
+            acc.ratedCount += g.rating > 0 ? 1 : 0;
+            acc.totalProg += g.progression || 0;
+            
+            if (g.format === 'Physique') acc.phys++;
+            else if (g.format === 'Digital') acc.digi++;
+            
+            if (g.subgames && g.subgames.length > 0) {
+                acc.countCompil++;
+                acc.totalSubGames += g.subgames.length;
+            } else {
+                acc.countSimple++;
+            }
+
+            if (Array.isArray(g.achievements)) {
+                acc.totalAch += g.achievements.length;
+                for (let i = 0; i < g.achievements.length; i++) {
+                    if (g.achievements[i].done) acc.doneAch++;
+                }
+            }
+            return acc;
+        }, { totalValue: 0, totalRating: 0, ratedCount: 0, totalProg: 0, phys: 0, digi: 0, countCompil: 0, countSimple: 0, totalSubGames: 0, totalAch: 0, doneAch: 0 });
+
+        const totalTickets = db.length;
+        const grandTotalGames = stats.countSimple + stats.totalSubGames;
+        const avgProg = totalTickets > 0 ? Math.round(stats.totalProg / totalTickets) : 0;
+        const avgRating = stats.ratedCount > 0 ? (stats.totalRating / stats.ratedCount).toFixed(1) : "0.0";
+        const physPct = totalTickets > 0 ? (stats.phys / totalTickets) * 100 : 0;
+        const achTotal = stats.totalAch;
+        const achDone = stats.doneAch;
+        const achLeft = achTotal - achDone;
+        const achPct = achTotal > 0 ? (achDone / achTotal) * 100 : 0;
+
+        // Affichage DOM
+        document.getElementById('totalTickets').innerText = totalTickets;
+        document.getElementById('grandTotalGames').innerText = grandTotalGames;
+        document.getElementById('totalValue').innerText = stats.totalValue.toLocaleString('fr-CA', { minimumFractionDigits: 2 }) + " $";
+        document.getElementById('avgRating').innerText = avgRating + " ★";
+        document.getElementById('totalAchievements').innerText = achTotal;
+        document.getElementById('doneAchievements').innerText = achDone;
+        document.getElementById('globalProgText').innerText = avgProg + "%";
+        document.getElementById('count-simple').innerText = stats.countSimple;
+        document.getElementById('count-compil').innerText = stats.countCompil;
+        document.getElementById('count-subs').innerText = stats.totalSubGames;
+        document.getElementById('lbl-phys').innerText = stats.phys + " (" + Math.round(physPct) + "%)";
+        document.getElementById('lbl-digi').innerText = stats.digi + " (" + Math.round(100 - physPct) + "%)";
+        document.getElementById('lbl-ach-done').innerText = achDone + " (" + Math.round(achPct) + "%)";
+        document.getElementById('lbl-ach-left').innerText = achLeft;
+        document.getElementById('lbl-ach-total').innerText = achTotal;
+
+        setTimeout(() => {
+            document.getElementById('globalProgFill').style.width = avgProg + "%";
+            document.getElementById('formatPie').style.background = `conic-gradient(var(--lavender-dark) 0% ${physPct}%, #aaaaaa ${physPct}% 100%)`;
+            document.getElementById('achPie').style.background = `conic-gradient(var(--ach-done) 0% ${achPct}%, var(--ach-pending) ${achPct}% 100%)`;
+        }, 300);
+
+
+        // --- 2. ANIMATION ÉTOILES OPTIMISÉE ---
+        const canvas = document.getElementById('star-canvas');
+        const ctx = canvas.getContext('2d');
+        const starColors = ['#ffffff', '#3498db', '#f1c40f', '#e74c3c', '#9b59b6', '#2ecc71'];
+        let stars = [];
+        const numStars = 150;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Star {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.color = starColors[Math.floor(Math.random() * starColors.length)];
+                this.speed = Math.random() * 0.5 + 0.1;
+                this.angle = Math.random() * Math.PI * 2;
+            }
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                if (this.x < 0) this.x = canvas.width;
+                else if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                else if (this.y > canvas.height) this.y = 0;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = this.color;
+            }
+        }
+
+        for (let i = 0; i < numStars; i++) stars.push(new Star());
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => { star.update(); star.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Retro Car Racer</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+		:root {
+			color-scheme: dark;
+			--bg: #1e1b20;
+			--panel: #2d2a32;
+			--panel-border: #5a4f70;
+			--text: #f3effa;
+			--accent: #a984db;
+			--accent-dark: #8263b1;
+			--danger: #ff5a5a;
+			--ok: #66e18c;
+			--gold: #f2c94c;
+			--gold-deep: #c68c10;
+			--gold-soft: #fff0a6;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+
+		body {
+			margin: 0;
+			min-height: 100dvh;
+			display: grid;
+			place-items: center;
+			background: radial-gradient(circle at top, #3c3350, var(--bg));
+			font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+			color: var(--text);
+		}
+
+		.game-shell {
+			width: 100vw;
+			height: 100dvh;
+			padding: 12px;
+			border-radius: 0;
+			border: 0;
+			background: linear-gradient(180deg, #3a3442, var(--panel));
+			box-shadow: none;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+
+		.game-layout {
+			flex: 1 1 auto;
+			min-height: 0;
+			display: flex;
+			gap: 0;
+		}
+
+		.hud {
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-start;
+			gap: 10px;
+			margin-bottom: 0;
+			font-size: 0.93rem;
+			width: clamp(140px, 20vw, 210px);
+			padding: 8px;
+			border: 2px solid var(--panel-border);
+			border-right: 0;
+			border-radius: 12px 0 0 12px;
+			background: rgba(243, 239, 250, 0.06);
+		}
+
+		.hud-box {
+			flex: 0 0 auto;
+			min-width: 0;
+			border: 1px solid #7a6a98;
+			border-radius: 9px;
+			padding: 8px 10px;
+			background: rgba(243, 239, 250, 0.06);
+		}
+
+		.hud-label {
+			color: #d7c9ee;
+			font-size: 0.78rem;
+			display: block;
+		}
+
+		.hud-value {
+			color: var(--accent);
+			font-weight: 700;
+			letter-spacing: 0.2px;
+		}
+
+		.hud-value.cash-value,
+		.shop-balance.cash-visual {
+			color: #fff4ba;
+			text-shadow: 0 0 10px rgba(242, 201, 76, 0.35), 0 0 18px rgba(255, 240, 166, 0.2);
+		}
+
+		.hud-value.cash-value {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 4px 8px;
+			border-radius: 999px;
+			background: linear-gradient(180deg, rgba(242, 201, 76, 0.16), rgba(198, 140, 16, 0.12));
+			border: 1px solid rgba(242, 201, 76, 0.28);
+			box-shadow: inset 0 0 0 1px rgba(255, 240, 166, 0.1);
+		}
+
+		.hud-value.cash-value::before,
+		.shop-balance.cash-visual::before {
+			content: "$";
+			display: inline-grid;
+			place-items: center;
+			width: 18px;
+			height: 18px;
+			border-radius: 50%;
+			background: radial-gradient(circle at 35% 30%, #fff8c7, var(--gold));
+			color: #6d4500;
+			font-weight: 900;
+			box-shadow: 0 0 12px rgba(242, 201, 76, 0.35);
+		}
+
+		.shop-balance.cash-visual {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 8px 12px;
+			border-radius: 999px;
+			background: linear-gradient(180deg, rgba(242, 201, 76, 0.14), rgba(198, 140, 16, 0.08));
+			border: 1px solid rgba(242, 201, 76, 0.22);
+		}
+
+		.cash-pop {
+			animation: cashPulse 380ms ease-out;
+		}
+
+		.game-stage {
+			flex: 1 1 auto;
+			min-height: 0;
+			display: grid;
+			place-items: center;
+			overflow: hidden;
+			border-radius: 0 12px 12px 0;
+			border: 2px solid var(--panel-border);
+			border-left: 2px solid var(--panel-border);
+			background: rgba(243, 239, 250, 0.05);
+		}
+
+		canvas {
+			width: 420px;
+			height: 700px;
+			display: block;
+			border-radius: 10px;
+			border: 2px solid #7a6a98;
+			background: #202020;
+			image-rendering: auto;
+		}
+
+		.overlay {
+			position: fixed;
+			inset: 0;
+			display: grid;
+			place-items: center;
+			padding: 16px;
+			background: rgba(0, 0, 0, 0.62);
+			backdrop-filter: blur(2px);
+		}
+
+		.menu {
+			width: min(95vw, 500px);
+			border: 2px solid var(--panel-border);
+			border-radius: 14px;
+			background: linear-gradient(180deg, #3a3442, #26212d);
+			padding: 18px;
+			box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+			font-family: "Press Start 2P", "Courier New", monospace;
+		}
+
+		.menu-page {
+			display: block;
+			opacity: 1;
+			transform: translateY(0);
+			will-change: opacity, transform;
+		}
+
+		.menu-page.hidden {
+			display: none;
+		}
+
+		.menu-stack {
+			display: grid;
+			gap: 10px;
+		}
+
+		.confirm-window {
+			width: min(92vw, 420px);
+			padding: 16px;
+			border: 2px solid #7a6a98;
+			border-radius: 12px;
+			background: linear-gradient(180deg, #3a3442, #26212d);
+			box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+			font-family: "Press Start 2P", "Courier New", monospace;
+		}
+
+		.confirm-text {
+			margin: 0;
+			color: #ffe1e7;
+			font-size: 0.62rem;
+			line-height: 1.8;
+			text-align: center;
+		}
+
+
+		h1, h2 {
+			margin: 0 0 8px 0;
+			text-align: center;
+			letter-spacing: 0.5px;
+			font-size: 1rem;
+			line-height: 1.4;
+		}
+
+		.subtitle {
+			margin: 0 0 16px;
+			text-align: center;
+			color: #d8cceb;
+			font-size: 0.7rem;
+			line-height: 1.6;
+		}
+
+		.field {
+			margin-bottom: 12px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 6px;
+			font-weight: 600;
+			font-size: 0.65rem;
+			line-height: 1.6;
+		}
+
+		input[type="text"] {
+			width: 100%;
+			padding: 10px;
+			border-radius: 8px;
+			border: 1px solid #7a6a98;
+			background: #201c26;
+			color: var(--text);
+			font-size: 0.8rem;
+			outline: none;
+			font-family: "Press Start 2P", "Courier New", monospace;
+		}
+
+		.car-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 8px;
+			margin-top: 8px;
+		}
+
+		.shop-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.pager {
+			margin-top: 10px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.pager-info {
+			flex: 1;
+			text-align: center;
+			font-size: 0.54rem;
+			color: #d8cceb;
+		}
+
+		.shop-card {
+			border: 2px solid #6f6191;
+			border-radius: 10px;
+			padding: 10px;
+			background: #241f2d;
+			display: grid;
+			gap: 8px;
+		}
+
+		.shop-card.owned {
+			border-color: var(--ok);
+		}
+
+		.shop-card img {
+			width: 100%;
+			display: block;
+			max-height: 92px;
+			object-fit: contain;
+		}
+
+		.shop-name,
+		.shop-price,
+		.shop-balance {
+			text-align: center;
+		}
+
+		.tuning-desc,
+		.tuning-level,
+		.tuning-effect {
+			text-align: center;
+			font-size: 0.52rem;
+			line-height: 1.7;
+		}
+
+		.tuning-desc {
+			color: #d8cceb;
+		}
+
+		.tuning-level {
+			color: #f5ecff;
+		}
+
+		.tuning-effect {
+			color: #9ef5ff;
+		}
+
+		.shop-name {
+			font-size: 0.58rem;
+			color: #f5ecff;
+		}
+
+		.shop-price,
+		.shop-balance {
+			font-size: 0.54rem;
+			line-height: 1.6;
+		}
+
+		.shop-price {
+			color: #ffe58a;
+		}
+
+		button.owned-button {
+			background: #5b5b66;
+			color: #f1f1f4;
+		}
+
+		button.owned-button:hover {
+			background: #5b5b66;
+			color: #f1f1f4;
+		}
+
+		.car-option {
+			border: 2px solid #6f6191;
+			border-radius: 10px;
+			padding: 8px;
+			background: #241f2d;
+			cursor: pointer;
+			position: relative;
+			transition: transform 0.1s ease, border-color 0.2s ease;
+		}
+
+		.car-option:hover {
+			transform: translateY(-1px);
+			border-color: #a984db;
+		}
+
+		.car-option.selected {
+			border-color: var(--ok);
+			box-shadow: 0 0 0 2px rgba(102, 225, 140, 0.2) inset;
+		}
+
+		.car-option img {
+			width: 100%;
+			display: block;
+			image-rendering: auto;
+		}
+
+		.car-option.locked {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		.car-badge {
+			position: absolute;
+			inset: auto 6px 6px 6px;
+			background: rgba(0, 0, 0, 0.7);
+			color: #fff;
+			font-size: 0.68rem;
+			border-radius: 6px;
+			padding: 3px 5px;
+			text-align: center;
+		}
+
+		.mode-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 8px;
+			margin-top: 8px;
+		}
+
+		.mode-option {
+			border: 2px solid #6f6191;
+			border-radius: 10px;
+			padding: 10px 8px;
+			background: #241f2d;
+			color: #f0e8ff;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.mode-option.selected {
+			border-color: var(--accent);
+			box-shadow: 0 0 0 2px rgba(169, 132, 219, 0.24) inset;
+		}
+
+		select {
+			width: 100%;
+			padding: 10px;
+			border-radius: 8px;
+			border: 1px solid #7a6a98;
+			background: #201c26;
+			color: var(--text);
+			font-size: 0.7rem;
+			outline: none;
+			font-family: "Press Start 2P", "Courier New", monospace;
+			line-height: 1.6;
+		}
+
+		.hidden {
+			display: none;
+		}
+
+		.actions {
+			margin-top: 14px;
+			display: flex;
+			gap: 8px;
+		}
+
+		button {
+			flex: 1;
+			border: 0;
+			border-radius: 9px;
+			padding: 11px;
+			font-size: 0.7rem;
+			font-weight: 700;
+			cursor: pointer;
+			background: var(--accent);
+			color: #1f1630;
+			font-family: "Press Start 2P", "Courier New", monospace;
+			line-height: 1.5;
+		}
+
+		button:hover {
+			background: var(--accent-dark);
+			color: #f7f0ff;
+		}
+
+		button.secondary {
+			background: var(--accent);
+			color: #1f1630;
+		}
+
+		button.tuning-button {
+			position: relative;
+			overflow: hidden;
+			background: linear-gradient(180deg, #fff0a6, var(--gold) 38%, var(--gold-deep));
+			color: #5d3500;
+			box-shadow: 0 0 0 1px rgba(255, 240, 166, 0.2) inset, 0 0 12px rgba(242, 201, 76, 0.35), 0 0 22px rgba(255, 232, 130, 0.18);
+		}
+
+		button.tuning-button:hover {
+			background: linear-gradient(180deg, #fff7c8, #ffd85f 40%, #d79a10);
+			color: #4c2a00;
+			box-shadow: 0 0 0 1px rgba(255, 248, 199, 0.28) inset, 0 0 16px rgba(242, 201, 76, 0.5), 0 0 30px rgba(255, 232, 130, 0.26);
+		}
+
+		button.tuning-button::before {
+			content: "";
+			position: absolute;
+			inset: -30% auto -30% -45%;
+			width: 42%;
+			transform: rotate(18deg);
+			background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 252, 214, 0.85), rgba(255, 255, 255, 0));
+			animation: tuningShine 2.3s linear infinite;
+			pointer-events: none;
+		}
+
+		button.back-button {
+			background: var(--accent-dark);
+			color: #fff;
+		}
+
+		button.back-button:hover {
+			background: #6f55a1;
+			color: #fff;
+		}
+
+		button.danger-button {
+			background: #9f3f54;
+			color: #fff4f7;
+		}
+
+		button.danger-button:hover {
+			background: #c44e69;
+			color: #fff;
+		}
+
+		button:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+
+		.note {
+			margin-top: 10px;
+			color: #d8cceb;
+			font-size: 0.85rem;
+			text-align: center;
+		}
+
+		.danger {
+			color: var(--danger);
+			font-weight: 700;
+			min-height: 1.2em;
+			font-size: 0.62rem;
+			line-height: 1.6;
+		}
+
+		.score-list {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+			display: grid;
+			gap: 8px;
+		}
+
+		.result-title {
+			color: #f7f0ff;
+			font-size: 1.08rem;
+			text-shadow: 0 0 12px rgba(169, 132, 219, 0.35);
+		}
+
+
+		.score-item {
+			display: block;
+			padding: 12px 14px;
+			border: 1px solid #7a6a98;
+			border-radius: 8px;
+			background: rgba(243, 239, 250, 0.06);
+		}
+
+		.score-mode {
+			color: #eadffe;
+			font-weight: 600;
+		}
+
+		.score-value {
+			color: var(--accent);
+			font-weight: 700;
+			display: flex;
+			justify-content: center;
+			font-size: 0.58rem;
+			line-height: 1.6;
+		}
+
+		.score-top5 {
+			margin: 0;
+			padding-left: 22px;
+			display: inline-block;
+			text-align: left;
+		}
+
+		.score-top5 li {
+			margin-bottom: 2px;
+		}
+
+		.menu-score {
+			width: min(95vw, 560px);
+			max-height: min(90dvh, 760px);
+			overflow: auto;
+		}
+
+		@keyframes tuningShine {
+			0% {
+				left: -45%;
+			}
+			100% {
+				left: 120%;
+			}
+		}
+
+		@keyframes cashPulse {
+			0% {
+				transform: scale(1);
+				filter: brightness(1);
+			}
+			45% {
+				transform: scale(1.06);
+				filter: brightness(1.22);
+			}
+			100% {
+				transform: scale(1);
+				filter: brightness(1);
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="game-shell">
+		<div class="game-layout">
+			<div class="hud">
+				<div class="hud-box">
+					<span class="hud-label">Mode</span>
+					<span id="hudMode" class="hud-value">Normal</span>
+				</div>
+				<div class="hud-box">
+					<span class="hud-label">Score</span>
+					<span id="hudScore" class="hud-value">0</span>
+				</div>
+				<div class="hud-box">
+					<span class="hud-label">Vitesse</span>
+					<span id="hudSpeed" class="hud-value">1.0x</span>
+				</div>
+				<div class="hud-box">
+					<span class="hud-label">Temps</span>
+					<span id="hudTime" class="hud-value">--</span>
+				</div>
+				<div class="hud-box">
+					<span class="hud-label">Cash</span>
+					<span id="hudCash" class="hud-value cash-value">0$</span>
+				</div>
+			</div>
+			<div class="game-stage" id="gameStage">
+				<canvas id="game" width="420" height="700" aria-label="Retro Car Racer"></canvas>
+			</div>
+		</div>
+	</div>
+
+	<div class="overlay" id="startOverlay">
+		<div class="menu">
+			<div id="menuPageMain" class="menu-page">
+				<h1>Retro Car Racer</h1>
+				<div class="menu-stack">
+					<button id="goModePageBtn">Nouvelle Partie</button>
+					<button id="goShopPageBtn" class="secondary">Shop</button>
+					<button id="goTuningPageBtn" class="secondary tuning-button hidden">Tuning</button>
+					<button id="bestScoreBtn" class="secondary">Meilleur Score</button>
+					<button id="goOptionsPageBtn" class="secondary">Option</button>
+				</div>
+				<p id="mainMenuStatus" class="danger"></p>
+				<p class="note">Contrôles: Clavier (flèches ou WASD)</p>
+			</div>
+
+			<div id="menuPageOptions" class="menu-page hidden">
+				<h2>Option</h2>
+				<p class="subtitle">Réglages et réinitialisation</p>
+				<div class="menu-stack">
+					<button id="fullscreenBtn" class="secondary">Fullscreen: OFF</button>
+					<button id="resetSaveBtn" class="danger-button">Effacer la sauvegarde!</button>
+				</div>
+				<p id="optionsStatus" class="danger"></p>
+				<div class="actions">
+					<button id="backToMainFromOptionsBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageShop" class="menu-page hidden">
+				<h2>Shop</h2>
+				<p id="shopBalance" class="subtitle shop-balance cash-visual">Cash: 0$</p>
+				<div id="shopGrid" class="shop-grid"></div>
+				<div class="pager">
+					<button id="shopPrevPageBtn" class="back-button" type="button">Prec.</button>
+					<span id="shopPageInfo" class="pager-info">Page 1 / 1</span>
+					<button id="shopNextPageBtn" type="button">Suiv.</button>
+				</div>
+				<p id="shopStatus" class="danger"></p>
+				<div class="actions">
+					<button id="backToMainFromShopBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageTuning" class="menu-page hidden">
+				<h2>Tuning</h2>
+				<p class="subtitle">Bonus actifs sur toutes les voitures</p>
+				<div id="tuningGrid" class="shop-grid"></div>
+				<p id="tuningStatus" class="danger"></p>
+				<div class="actions">
+					<button id="backToMainFromTuningBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageMode" class="menu-page hidden">
+				<h2>Choix du mode</h2>
+				<div class="menu-stack">
+					<button id="chooseClassicRaceBtn">Course Classique</button>
+					<button id="chooseTimeRaceBtn" class="secondary">Course contre la montre</button>
+				</div>
+
+				<div class="actions">
+					<button id="backToMainBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageClassic" class="menu-page hidden">
+				<h2>Course Classique</h2>
+				<div class="menu-stack">
+					<button id="chooseEasyModeBtn">Facile</button>
+					<button id="chooseNormalModeBtn">Normal</button>
+					<button id="chooseHardModeBtn">Difficile</button>
+				</div>
+				<div class="actions">
+					<button id="backToModeTypeBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageTime" class="menu-page hidden">
+				<h2>Course contre la montre</h2>
+				<div class="menu-stack">
+					<button id="chooseTime30Btn">30s</button>
+					<button id="chooseTime60Btn">60s</button>
+					<button id="chooseTime90Btn">90s</button>
+				</div>
+				<div class="actions">
+					<button id="backToModeTypeFromTimeBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="menuPageCar" class="menu-page hidden">
+				<h2>Choisis ta voiture</h2>
+				<div class="field">
+					<div class="car-grid" id="carGrid"></div>
+					<div class="pager">
+						<button id="carPrevPageBtn" class="back-button" type="button">Prec.</button>
+						<span id="carPageInfo" class="pager-info">Page 1 / 1</span>
+						<button id="carNextPageBtn" type="button">Suiv.</button>
+					</div>
+				</div>
+				<p id="startError" class="danger"></p>
+				<div class="actions">
+					<button id="backToModeBtn" class="back-button">Retour</button>
+					<button id="startBtn">Lancer la course</button>
+				</div>
+				<p class="note">Contrôles: Gauche/Droite, Haut accélère, Bas ralentit</p>
+			</div>
+		</div>
+	</div>
+
+	<div class="overlay" id="resetConfirmOverlay" style="display:none;">
+		<div class="confirm-window">
+			<h2>Confirmation</h2>
+			<p class="confirm-text">Cette action efface la sauvegarde de score et la progression.</p>
+			<div class="actions">
+				<button id="confirmResetBtn" class="danger-button">Confirmer</button>
+				<button id="cancelResetBtn">Annuler</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="overlay" id="bestScoreOverlay" style="display:none;">
+		<div class="menu menu-score">
+			<div id="bestScorePageMain" class="menu-page">
+				<h2>Meilleur Score</h2>
+				<div class="menu-stack">
+					<button id="bestScoreClassicBtn">Course Classique</button>
+					<button id="bestScoreTimeBtn" class="secondary">Course contre la montre</button>
+				</div>
+				<div class="actions">
+					<button id="closeBestScoreBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="bestScorePageClassic" class="menu-page hidden">
+				<h2>Course Classique</h2>
+				<div class="menu-stack">
+					<button id="bestScoreEasyBtn">Facile</button>
+					<button id="bestScoreNormalBtn">Normal</button>
+					<button id="bestScoreHardBtn">Difficile</button>
+				</div>
+				<div class="actions">
+					<button id="bestScoreBackToMainBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="bestScorePageTime" class="menu-page hidden">
+				<h2>Course contre la montre</h2>
+				<div class="menu-stack">
+					<button id="bestScore30Btn">30s</button>
+					<button id="bestScore60Btn">60s</button>
+					<button id="bestScore90Btn">90s</button>
+				</div>
+				<div class="actions">
+					<button id="bestScoreBackToMainFromTimeBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+
+			<div id="bestScorePageResults" class="menu-page hidden">
+				<h2 id="bestScoreResultTitle" class="result-title">Meilleur Score</h2>
+				<p id="bestScoreResultSubtitle" class="subtitle">Résultats</p>
+				<ul id="bestScoreList" class="score-list"></ul>
+				<div class="actions">
+					<button id="bestScoreBackBtn" class="back-button">Retour</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="overlay" id="gameOverOverlay" style="display:none;">
+		<div class="menu">
+			<h2 id="gameOverTitle">GAME OVER</h2>
+			<p class="subtitle" id="gameOverText">Tu as heurté un ennemi.</p>
+			<div id="recordForm" class="field hidden">
+				<label for="recordNickname">Nouveau record ! Entre ton surnom</label>
+				<input id="recordNickname" type="text" maxlength="16" placeholder="Ex: SpeedFox" autocomplete="off">
+				<p id="recordError" class="danger"></p>
+				<div class="actions">
+					<button id="saveRecordBtn">Enregistrer le record</button>
+				</div>
+			</div>
+			<div class="actions">
+				<button id="restartBtn">Rejouer</button>
+				<button id="menuBtn" class="secondary">Retour menu</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const ASSET_ROOT = "Retro Car Racer/";
+		const SCORE_STORAGE_KEY = "retroCarRacerHighScoresV1";
+		const PROGRESSION_STORAGE_KEY = "retroCarRacerProgressionV1";
+		const MONEY_5_SRC = ASSET_ROOT + "5_Dollar.png";
+		const MONEY_25_SRC = ASSET_ROOT + "25_Dollar.png";
+
+		const playerCars = [
+			{ key: "red", src: ASSET_ROOT + "Char_Rouge.png", label: "Rouge", defaultUnlocked: true, unlocked: true },
+			{ key: "blue", src: ASSET_ROOT + "Char_Bleu.png", label: "Bleu", defaultUnlocked: true, unlocked: true },
+			{ key: "yellow", src: ASSET_ROOT + "Char_Jaune.png", label: "Jaune", defaultUnlocked: true, unlocked: true },
+			{ key: "green", src: ASSET_ROOT + "Char_Vert.png", label: "Vert", defaultUnlocked: true, unlocked: true },
+			{ key: "white", src: ASSET_ROOT + "Char_Blanc.png", label: "Blanc", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "brown", src: ASSET_ROOT + "Char_Brun.png", label: "Brun", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "cyan", src: ASSET_ROOT + "Char_Cyan.png", label: "Cyan", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "mauve", src: ASSET_ROOT + "Char_Mauve.png", label: "Mauve", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "black", src: ASSET_ROOT + "Char_Noir.png", label: "Noir", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "orange", src: ASSET_ROOT + "Char_Orange.png", label: "Orange", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "pink", src: ASSET_ROOT + "Char_Rose.png", label: "Rose", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "turquoise", src: ASSET_ROOT + "Char_Turquoise.png", label: "Turquoise", defaultUnlocked: false, unlocked: false, shopPrice: 250 },
+			{ key: "bronze", src: ASSET_ROOT + "Char_Bronze.png", label: "Bronze", defaultUnlocked: false, unlocked: false, unlockRequirement: "Terminer 30s", rewardTime: 30 },
+			{ key: "silver", src: ASSET_ROOT + "Char_Argent.png", label: "Argent", defaultUnlocked: false, unlocked: false, unlockRequirement: "Terminer 60s", rewardTime: 60 },
+			{ key: "gold", src: ASSET_ROOT + "Char_Or.png", label: "Or", defaultUnlocked: false, unlocked: false, unlockRequirement: "Terminer 90s", rewardTime: 90 },
+			{ key: "platinum", src: ASSET_ROOT + "Char_Platine.png", label: "Platine", defaultUnlocked: false, unlocked: false, hiddenUntilUnlocked: true, unlockWhenAllOthersOwned: true }
+		];
+
+		const tuningStats = [
+			{ key: "topSpeed", label: "Turbo", description: "Vitesse max", maxLevel: 5, baseCost: 300, costStep: 180, bonusPerLevel: 0.22, unit: "x" },
+			{ key: "acceleration", label: "Moteur", description: "Acceleration", maxLevel: 5, baseCost: 280, costStep: 170, bonusPerLevel: 0.18, unit: "x" },
+			{ key: "handling", label: "Grip", description: "Maniabilite", maxLevel: 5, baseCost: 260, costStep: 150, bonusPerLevel: 32, unit: " pts" }
+		];
+
+		const enemyCars = [
+			ASSET_ROOT + "Enemy_01.png",
+			ASSET_ROOT + "Enemy_02.png",
+			ASSET_ROOT + "Enemy_03.png"
+		];
+
+		const gameStage = document.getElementById("gameStage");
+		const canvas = document.getElementById("game");
+		const ctx = canvas.getContext("2d");
+		const platinumFxCanvas = document.createElement("canvas");
+		const platinumFxCtx = platinumFxCanvas.getContext("2d");
+		const VIRTUAL_WIDTH = 420;
+		const VIRTUAL_HEIGHT = 700;
+		const GAME_ASPECT = VIRTUAL_WIDTH / VIRTUAL_HEIGHT;
+
+		const startOverlay = document.getElementById("startOverlay");
+		const bestScoreOverlay = document.getElementById("bestScoreOverlay");
+		const gameOverOverlay = document.getElementById("gameOverOverlay");
+		const carGrid = document.getElementById("carGrid");
+		const startBtn = document.getElementById("startBtn");
+		const goModePageBtn = document.getElementById("goModePageBtn");
+		const goShopPageBtn = document.getElementById("goShopPageBtn");
+		const goTuningPageBtn = document.getElementById("goTuningPageBtn");
+		const goOptionsPageBtn = document.getElementById("goOptionsPageBtn");
+		const mainMenuStatus = document.getElementById("mainMenuStatus");
+		const backToMainBtn = document.getElementById("backToMainBtn");
+		const backToMainFromShopBtn = document.getElementById("backToMainFromShopBtn");
+		const backToMainFromTuningBtn = document.getElementById("backToMainFromTuningBtn");
+		const backToMainFromOptionsBtn = document.getElementById("backToMainFromOptionsBtn");
+		const shopPrevPageBtn = document.getElementById("shopPrevPageBtn");
+		const shopNextPageBtn = document.getElementById("shopNextPageBtn");
+		const shopPageInfo = document.getElementById("shopPageInfo");
+		const chooseClassicRaceBtn = document.getElementById("chooseClassicRaceBtn");
+		const chooseTimeRaceBtn = document.getElementById("chooseTimeRaceBtn");
+		const chooseEasyModeBtn = document.getElementById("chooseEasyModeBtn");
+		const chooseNormalModeBtn = document.getElementById("chooseNormalModeBtn");
+		const chooseHardModeBtn = document.getElementById("chooseHardModeBtn");
+		const chooseTime30Btn = document.getElementById("chooseTime30Btn");
+		const chooseTime60Btn = document.getElementById("chooseTime60Btn");
+		const chooseTime90Btn = document.getElementById("chooseTime90Btn");
+		const backToModeTypeBtn = document.getElementById("backToModeTypeBtn");
+		const backToModeTypeFromTimeBtn = document.getElementById("backToModeTypeFromTimeBtn");
+		const backToModeBtn = document.getElementById("backToModeBtn");
+		const carPrevPageBtn = document.getElementById("carPrevPageBtn");
+		const carNextPageBtn = document.getElementById("carNextPageBtn");
+		const carPageInfo = document.getElementById("carPageInfo");
+		const menuPageMain = document.getElementById("menuPageMain");
+		const menuPageShop = document.getElementById("menuPageShop");
+		const menuPageTuning = document.getElementById("menuPageTuning");
+		const menuPageOptions = document.getElementById("menuPageOptions");
+		const menuPageMode = document.getElementById("menuPageMode");
+		const menuPageClassic = document.getElementById("menuPageClassic");
+		const menuPageTime = document.getElementById("menuPageTime");
+		const menuPageCar = document.getElementById("menuPageCar");
+		const bestScoreBtn = document.getElementById("bestScoreBtn");
+		const fullscreenBtn = document.getElementById("fullscreenBtn");
+		const resetSaveBtn = document.getElementById("resetSaveBtn");
+		const resetConfirmOverlay = document.getElementById("resetConfirmOverlay");
+		const confirmResetBtn = document.getElementById("confirmResetBtn");
+		const cancelResetBtn = document.getElementById("cancelResetBtn");
+		const optionsStatus = document.getElementById("optionsStatus");
+		const shopGrid = document.getElementById("shopGrid");
+		const shopBalance = document.getElementById("shopBalance");
+		const shopStatus = document.getElementById("shopStatus");
+		const tuningGrid = document.getElementById("tuningGrid");
+		const tuningStatus = document.getElementById("tuningStatus");
+		const closeBestScoreBtn = document.getElementById("closeBestScoreBtn");
+		const bestScoreClassicBtn = document.getElementById("bestScoreClassicBtn");
+		const bestScoreTimeBtn = document.getElementById("bestScoreTimeBtn");
+		const bestScoreEasyBtn = document.getElementById("bestScoreEasyBtn");
+		const bestScoreNormalBtn = document.getElementById("bestScoreNormalBtn");
+		const bestScoreHardBtn = document.getElementById("bestScoreHardBtn");
+		const bestScore30Btn = document.getElementById("bestScore30Btn");
+		const bestScore60Btn = document.getElementById("bestScore60Btn");
+		const bestScore90Btn = document.getElementById("bestScore90Btn");
+		const bestScoreBackToMainBtn = document.getElementById("bestScoreBackToMainBtn");
+		const bestScoreBackToMainFromTimeBtn = document.getElementById("bestScoreBackToMainFromTimeBtn");
+		const bestScoreBackBtn = document.getElementById("bestScoreBackBtn");
+		const bestScoreResultTitle = document.getElementById("bestScoreResultTitle");
+		const bestScoreResultSubtitle = document.getElementById("bestScoreResultSubtitle");
+		const bestScoreList = document.getElementById("bestScoreList");
+		const bestScorePageMain = document.getElementById("bestScorePageMain");
+		const bestScorePageClassic = document.getElementById("bestScorePageClassic");
+		const bestScorePageTime = document.getElementById("bestScorePageTime");
+		const bestScorePageResults = document.getElementById("bestScorePageResults");
+		const restartBtn = document.getElementById("restartBtn");
+		const menuBtn = document.getElementById("menuBtn");
+		const recordForm = document.getElementById("recordForm");
+		const recordNicknameInput = document.getElementById("recordNickname");
+		const recordError = document.getElementById("recordError");
+		const saveRecordBtn = document.getElementById("saveRecordBtn");
+		const startError = document.getElementById("startError");
+		const hudMode = document.getElementById("hudMode");
+		const hudScore = document.getElementById("hudScore");
+		const hudSpeed = document.getElementById("hudSpeed");
+		const hudTime = document.getElementById("hudTime");
+		const hudCash = document.getElementById("hudCash");
+		const gameOverTitle = document.getElementById("gameOverTitle");
+		const gameOverText = document.getElementById("gameOverText");
+		const menuPages = {
+			main: menuPageMain,
+			shop: menuPageShop,
+			tuning: menuPageTuning,
+			options: menuPageOptions,
+			mode: menuPageMode,
+			classic: menuPageClassic,
+			time: menuPageTime,
+			car: menuPageCar
+		};
+		const MENU_TRANSITION_OUT_MS = 95;
+		const MENU_TRANSITION_IN_MS = 115;
+		const MENU_TRANSITION_OFFSET_PX = 7;
+		const CAR_SELECTION_PAGE_SIZE = 8;
+		const SHOP_PAGE_SIZE = 4;
+		const SECRET_COLOR = "#8efcff";
+		let activeMenuPage = "main";
+		let menuTransitionLock = false;
+		let activeScoreSlot = "normal";
+		let autoFullscreenPending = true;
+		let carBackPage = "classic";
+		let activeBestScorePage = "main";
+		let bestScoreBackPage = "classic";
+		let bestScoreTransitionLock = false;
+		let carSelectionPage = 0;
+		let shopPage = 0;
+
+		const modeSettings = {
+			easy: {
+				label: "Facile",
+				baseSpeed: 0.8,
+				minSpeed: 0.55,
+				maxSpeed: 2.1,
+				accelUp: 0.9,
+				decelDown: 1.0,
+				baseSpawnDelay: 1220,
+				minSpawnDelay: 760,
+				enemyBaseSpeed: 95,
+				enemySpeedVariance: 55,
+				enemyFlowBoost: 58,
+				scoreRate: 102,
+				timeChallenge: false
+			},
+			normal: {
+				label: "Normal",
+				baseSpeed: 1.05,
+				minSpeed: 0.7,
+				maxSpeed: 3.0,
+				accelUp: 1.25,
+				decelDown: 1.35,
+				baseSpawnDelay: 880,
+				minSpawnDelay: 420,
+				enemyBaseSpeed: 150,
+				enemySpeedVariance: 95,
+				enemyFlowBoost: 95,
+				scoreRate: 132,
+				timeChallenge: false
+			},
+			nes: {
+				label: "Difficile",
+				baseSpeed: 1.2,
+				minSpeed: 0.8,
+				maxSpeed: 3.4,
+				accelUp: 1.0,
+				decelDown: 1.15,
+				baseSpawnDelay: 700,
+				minSpawnDelay: 280,
+				enemyBaseSpeed: 195,
+				enemySpeedVariance: 135,
+				enemyFlowBoost: 135,
+				scoreRate: 150,
+				timeChallenge: false
+			},
+			time: {
+				label: "Time Challenge",
+				baseSpeed: 1.0,
+				minSpeed: 0.65,
+				maxSpeed: 3.1,
+				accelUp: 1.2,
+				decelDown: 1.3,
+				baseSpawnDelay: 820,
+				minSpawnDelay: 360,
+				enemyBaseSpeed: 165,
+				enemySpeedVariance: 105,
+				enemyFlowBoost: 110,
+				scoreRate: 138,
+				timeChallenge: true
+			}
+		};
+
+		const scoreSlots = [
+			{ key: "easy", label: "Facile" },
+			{ key: "normal", label: "Normal" },
+			{ key: "nes", label: "Difficile" },
+			{ key: "time_30", label: "Time Challenge (30s)" },
+			{ key: "time_60", label: "Time Challenge (60s)" },
+			{ key: "time_90", label: "Time Challenge (90s)" }
+		];
+
+		const road = {
+			x: 65,
+			width: 290,
+			y: 0,
+			height: canvas.height
+		};
+
+		const game = {
+			running: false,
+			over: false,
+			selectedCar: playerCars[0],
+			selectedMode: "normal",
+			modeConfig: modeSettings.normal,
+			score: 0,
+			speedFactor: modeSettings.normal.baseSpeed,
+			distance: 0,
+			timeLimit: 0,
+			timeLeft: 0,
+			laneOffset: 0,
+			enemies: [],
+			pickups: [],
+			enemySpawnTimer: 0,
+			enemySpawnDelay: modeSettings.normal.baseSpawnDelay,
+			pickupSpawnTimer: 0,
+			pickupSpawnDelay: 0,
+			lastTime: 0,
+			scoreKey: "normal"
+		};
+
+		const keyState = {
+			ArrowLeft: false,
+			ArrowRight: false,
+			ArrowUp: false,
+			ArrowDown: false,
+			a: false,
+			d: false,
+			w: false,
+			s: false
+		};
+
+		const images = {};
+		let highScores = loadHighScores();
+		let progression = loadProgression();
+
+		const player = {
+			x: road.x + road.width / 2 - 22,
+			y: canvas.height - 140,
+			width: 44,
+			height: 76,
+			baseSpeed: 280,
+			speed: 280,
+			sprite: null
+		};
+
+		function loadImage(src) {
+			return new Promise((resolve, reject) => {
+				const img = new Image();
+				img.onload = () => resolve(img);
+				img.onerror = () => reject(new Error("Impossible de charger: " + src));
+				img.src = src;
+			});
+		}
+
+		function clamp(value, min, max) {
+			return Math.max(min, Math.min(max, value));
+		}
+
+		function resetInputState() {
+			Object.keys(keyState).forEach(key => {
+				keyState[key] = false;
+			});
+		}
+
+		function setOverlayVisibility({ start = false, best = false, gameOver = false }) {
+			startOverlay.style.display = start ? "grid" : "none";
+			bestScoreOverlay.style.display = best ? "grid" : "none";
+			gameOverOverlay.style.display = gameOver ? "grid" : "none";
+		}
+
+		function resetOptionsStatus() {
+			optionsStatus.style.color = "";
+			optionsStatus.textContent = "";
+		}
+
+		function resetShopStatus() {
+			shopStatus.style.color = "";
+			shopStatus.textContent = "";
+		}
+
+		function resetTuningStatus() {
+			tuningStatus.style.color = "";
+			tuningStatus.textContent = "";
+		}
+
+		function resetMainMenuStatus() {
+			mainMenuStatus.style.color = "";
+			mainMenuStatus.textContent = "";
+		}
+
+		function hideResetConfirmPanel() {
+			resetConfirmOverlay.style.display = "none";
+		}
+
+		function showResetConfirmPanel() {
+			resetOptionsStatus();
+			resetConfirmOverlay.style.display = "grid";
+		}
+
+		async function loadAssets() {
+			const allAssets = [...playerCars.map(car => car.src), ...enemyCars, MONEY_5_SRC, MONEY_25_SRC];
+			const loaded = await Promise.all(allAssets.map(src => loadImage(src)));
+			allAssets.forEach((src, index) => {
+				images[src] = loaded[index];
+			});
+		}
+
+		function getDefaultHighScores() {
+			const baseBySlot = {
+				easy: 2200,
+				normal: 3600,
+				nes: 5200,
+				time_30: 1800,
+				time_60: 3400,
+				time_90: 5000
+			};
+			const names = ["Alex", "Nova", "Rex", "Luna", "Byte", "Kira", "Milo", "Vex", "Jade", "Fox"];
+			const defaults = {};
+			scoreSlots.forEach((slot, slotIndex) => {
+				const baseScore = baseBySlot[slot.key] || 1200;
+				defaults[slot.key] = Array.from({ length: 5 }, (_, rank) => ({
+					name: names[(slotIndex + rank) % names.length],
+					score: Math.max(0, baseScore - rank * (180 + slotIndex * 12))
+				}));
+			});
+			return defaults;
+		}
+
+		function normalizeTop5(records, fallbackRecords) {
+			if (Array.isArray(records)) {
+				return records
+					.filter(entry => entry && typeof entry.score === "number" && typeof entry.name === "string")
+					.map(entry => ({ name: entry.name.trim() || "---", score: Math.max(0, Math.floor(entry.score)) }))
+					.sort((a, b) => b.score - a.score)
+					.slice(0, 5)
+					.concat(fallbackRecords)
+					.slice(0, 5);
+			}
+
+			if (records && typeof records === "object" && typeof records.score === "number") {
+				return [{
+					name: typeof records.name === "string" && records.name.trim() ? records.name.trim() : "---",
+					score: Math.max(0, Math.floor(records.score))
+				}].concat(fallbackRecords).slice(0, 5);
+			}
+
+			return fallbackRecords.slice(0, 5);
+		}
+
+		function loadHighScores() {
+			const defaults = getDefaultHighScores();
+			try {
+				const raw = localStorage.getItem(SCORE_STORAGE_KEY);
+				if (!raw) {
+					return defaults;
+				}
+				const parsed = JSON.parse(raw);
+				const normalized = {};
+				scoreSlots.forEach(slot => {
+					normalized[slot.key] = normalizeTop5(parsed?.[slot.key], defaults[slot.key]);
+				});
+				return normalized;
+			} catch {
+				return defaults;
+			}
+		}
+
+		function saveHighScores() {
+			localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(highScores));
+		}
+
+		function getDefaultTuningLevels() {
+			return Object.fromEntries(tuningStats.map(stat => [stat.key, 0]));
+		}
+
+		function getDefaultProgression() {
+			return {
+				cash: 0,
+				tuningLevels: getDefaultTuningLevels(),
+				unlockedCars: Object.fromEntries(
+					playerCars.map(car => [car.key, Boolean(car.defaultUnlocked)])
+				)
+			};
+		}
+
+		function loadProgression() {
+			const defaults = getDefaultProgression();
+			try {
+				const raw = localStorage.getItem(PROGRESSION_STORAGE_KEY);
+				if (!raw) {
+					return defaults;
+				}
+				const parsed = JSON.parse(raw);
+				const cash = Number.isFinite(parsed?.cash) ? Math.max(0, Math.floor(parsed.cash)) : 0;
+				const unlockedCars = { ...defaults.unlockedCars };
+				const tuningLevels = { ...defaults.tuningLevels };
+				playerCars.forEach(car => {
+					unlockedCars[car.key] = car.defaultUnlocked || Boolean(parsed?.unlockedCars?.[car.key]);
+				});
+				tuningStats.forEach(stat => {
+					const rawLevel = parsed?.tuningLevels?.[stat.key];
+					tuningLevels[stat.key] = Number.isFinite(rawLevel)
+						? clamp(Math.floor(rawLevel), 0, stat.maxLevel)
+						: 0;
+				});
+				syncSecretCarUnlocks(unlockedCars);
+				return { cash, unlockedCars, tuningLevels };
+			} catch {
+				return defaults;
+			}
+		}
+
+		function saveProgression() {
+			localStorage.setItem(PROGRESSION_STORAGE_KEY, JSON.stringify(progression));
+		}
+
+		function shouldAutoUnlockCar(car, unlockedCarsState) {
+			if (!car.unlockWhenAllOthersOwned) {
+				return false;
+			}
+
+			return playerCars
+				.filter(entry => entry.key !== car.key && !entry.hiddenUntilUnlocked)
+				.every(entry => entry.defaultUnlocked || Boolean(unlockedCarsState?.[entry.key]));
+		}
+
+		function syncSecretCarUnlocks(unlockedCarsState) {
+			const unlockedNow = [];
+			playerCars.forEach(car => {
+				if (shouldAutoUnlockCar(car, unlockedCarsState) && !unlockedCarsState?.[car.key]) {
+					unlockedCarsState[car.key] = true;
+					unlockedNow.push(car.label);
+				}
+			});
+			return unlockedNow;
+		}
+
+		function hasUnlockedPlatinum() {
+			return Boolean(progression?.unlockedCars?.platinum);
+		}
+
+		function updateSecretMenuButtons() {
+			goTuningPageBtn.classList.toggle("hidden", !hasUnlockedPlatinum());
+		}
+
+		function getVisibleCarSelectionCars() {
+			return playerCars.filter(car => !car.hiddenUntilUnlocked || car.unlocked);
+		}
+
+		function getTuningLevel(statKey) {
+			return progression.tuningLevels?.[statKey] || 0;
+		}
+
+		function getTuningCost(stat) {
+			return stat.baseCost + getTuningLevel(stat.key) * stat.costStep;
+		}
+
+		function getTuningBonuses() {
+			return {
+				topSpeed: getTuningLevel("topSpeed") * 0.22,
+				acceleration: getTuningLevel("acceleration") * 0.18,
+				handling: getTuningLevel("handling") * 32
+			};
+		}
+
+		function getEffectiveModeConfig(modeKey) {
+			const baseConfig = modeSettings[modeKey] || modeSettings.normal;
+			const bonuses = getTuningBonuses();
+			return {
+				...baseConfig,
+				maxSpeed: baseConfig.maxSpeed + bonuses.topSpeed,
+				accelUp: baseConfig.accelUp + bonuses.acceleration
+			};
+		}
+
+		function getEffectivePlayerSpeed() {
+			return player.baseSpeed + getTuningBonuses().handling;
+		}
+
+		function getSecretUnlockMessage() {
+			return "Signal inconnu detecte... La voiture Platine vient d'apparaitre dans ton garage.";
+		}
+
+		function applyProgressionToCars() {
+			const unlockedNow = syncSecretCarUnlocks(progression.unlockedCars);
+			playerCars.forEach(car => {
+				car.unlocked = car.defaultUnlocked || Boolean(progression.unlockedCars?.[car.key]);
+			});
+			updateSecretMenuButtons();
+			return unlockedNow;
+		}
+
+		function updateWalletDisplay() {
+			hudCash.textContent = `${progression.cash}$`;
+			shopBalance.textContent = `Cash: ${progression.cash}$`;
+			[hudCash, shopBalance].forEach(element => {
+				element.classList.remove("cash-pop");
+				void element.offsetWidth;
+				element.classList.add("cash-pop");
+			});
+		}
+
+		function clampPageIndex(pageIndex, totalItems, pageSize) {
+			const maxPage = Math.max(0, Math.ceil(totalItems / pageSize) - 1);
+			return clamp(pageIndex, 0, maxPage);
+		}
+
+		function getPagedItems(items, pageIndex, pageSize) {
+			const safePage = clampPageIndex(pageIndex, items.length, pageSize);
+			const startIndex = safePage * pageSize;
+			return {
+				pageIndex: safePage,
+				totalPages: Math.max(1, Math.ceil(items.length / pageSize)),
+				items: items.slice(startIndex, startIndex + pageSize)
+			};
+		}
+
+		function updatePagerControls(prevButton, nextButton, infoElement, pageIndex, totalPages) {
+			prevButton.disabled = pageIndex <= 0;
+			nextButton.disabled = pageIndex >= totalPages - 1;
+			infoElement.textContent = `Page ${pageIndex + 1} / ${totalPages}`;
+		}
+
+		function syncCarSelectionPageToSelectedCar() {
+			const visibleCars = getVisibleCarSelectionCars();
+			const selectedIndex = visibleCars.findIndex(car => game.selectedCar && car.key === game.selectedCar.key);
+			if (selectedIndex >= 0) {
+				carSelectionPage = Math.floor(selectedIndex / CAR_SELECTION_PAGE_SIZE);
+			}
+		}
+
+		function findFirstUnlockedCar() {
+			return playerCars.find(car => car.unlocked) || playerCars[0];
+		}
+
+		function unlockRewardCarsForTimeLimit(timeLimit) {
+			const unlockedNow = [];
+			playerCars.forEach(car => {
+				if (car.rewardTime !== timeLimit) {
+					return;
+				}
+				if (!progression.unlockedCars[car.key]) {
+					progression.unlockedCars[car.key] = true;
+					unlockedNow.push(car.label);
+				}
+			});
+
+			if (unlockedNow.length) {
+				const secretUnlocked = applyProgressionToCars();
+				unlockedNow.push(...secretUnlocked);
+				saveProgression();
+				buildCarSelection();
+			}
+
+			return unlockedNow;
+		}
+
+		function resetProgression() {
+			localStorage.removeItem(SCORE_STORAGE_KEY);
+			localStorage.removeItem(PROGRESSION_STORAGE_KEY);
+			highScores = loadHighScores();
+			progression = loadProgression();
+			applyProgressionToCars();
+			updateWalletDisplay();
+			activeScoreSlot = "normal";
+			carSelectionPage = 0;
+			shopPage = 0;
+			game.selectedCar = findFirstUnlockedCar();
+			game.scoreKey = "normal";
+			buildCarSelection();
+			renderBestScoreMenu();
+			updateHudDisplay({
+				modeLabel: getModeLabel(game.selectedMode, game.timeLimit),
+				score: 0,
+				speed: modeSettings[game.selectedMode].baseSpeed,
+				timeText: "--"
+			});
+			resetInputState();
+			hideResetConfirmPanel();
+			resetOptionsStatus();
+			showStartMenuPage("main");
+		}
+
+		function getPickupConfigForMode(modeKey) {
+			if (modeKey === "easy") {
+				return {
+					spawnDelay: 2200,
+					choices: [{ value: 5, weight: 1 }]
+				};
+			}
+
+			if (modeKey === "normal") {
+				return {
+					spawnDelay: 1950,
+					choices: [{ value: 5, weight: 0.78 }, { value: 25, weight: 0.22 }]
+				};
+			}
+
+			if (modeKey === "nes") {
+				return {
+					spawnDelay: 2100,
+					choices: [{ value: 5, weight: 0.32 }, { value: 25, weight: 0.68 }]
+				};
+			}
+
+			return null;
+		}
+
+		function chooseWeightedPickupValue(choices) {
+			const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
+			let roll = Math.random() * total;
+			for (const choice of choices) {
+				roll -= choice.weight;
+				if (roll <= 0) {
+					return choice.value;
+				}
+			}
+			return choices[choices.length - 1].value;
+		}
+
+		function getCarBadgeText(car) {
+			if (car.unlocked) {
+				return car.label;
+			}
+			return "Bloquer";
+		}
+
+		function getCarLockText(car) {
+			if (car.unlocked) {
+				return car.label;
+			}
+			if (typeof car.shopPrice === "number") {
+				return `${car.label} (${car.shopPrice}$)`;
+			}
+			return `${car.label} (${car.unlockRequirement})`;
+		}
+
+		function buildShopMenu() {
+			shopGrid.innerHTML = "";
+			const shopCars = playerCars.filter(car => typeof car.shopPrice === "number");
+			const pageData = getPagedItems(shopCars, shopPage, SHOP_PAGE_SIZE);
+			shopPage = pageData.pageIndex;
+			pageData.items.forEach(car => {
+				const card = document.createElement("div");
+				card.className = `shop-card${car.unlocked ? " owned" : ""}`;
+				const canAfford = progression.cash >= car.shopPrice;
+				const actionLabel = car.unlocked ? "Acquis" : "Acheter";
+				card.innerHTML = `
+					<img src="${car.src}" alt="Voiture ${car.label}">
+					<div class="shop-name">${car.label}</div>
+					<div class="shop-price">Prix: ${car.shopPrice}$</div>
+				`;
+
+				const buyButton = document.createElement("button");
+				buyButton.type = "button";
+				buyButton.textContent = actionLabel;
+				buyButton.disabled = car.unlocked || !canAfford;
+				if (car.unlocked) {
+					buyButton.classList.add("owned-button");
+				} else if (!canAfford) {
+					buyButton.classList.add("danger-button");
+				}
+				buyButton.addEventListener("click", () => buyShopCar(car.key));
+				card.appendChild(buyButton);
+				shopGrid.appendChild(card);
+			});
+			updatePagerControls(shopPrevPageBtn, shopNextPageBtn, shopPageInfo, shopPage, pageData.totalPages);
+			updateWalletDisplay();
+		}
+
+		function buildTuningMenu() {
+			tuningGrid.innerHTML = "";
+			tuningStats.forEach(stat => {
+				const level = getTuningLevel(stat.key);
+				const isMaxed = level >= stat.maxLevel;
+				const cost = getTuningCost(stat);
+				const canAfford = progression.cash >= cost;
+				const card = document.createElement("div");
+				card.className = `shop-card${isMaxed ? " owned" : ""}`;
+				card.innerHTML = `
+					<div class="shop-name">${stat.label}</div>
+					<div class="tuning-desc">${stat.description}</div>
+					<div class="tuning-level">Niveau ${level} / ${stat.maxLevel}</div>
+					<div class="tuning-effect">Bonus total: +${(level * stat.bonusPerLevel).toFixed(stat.unit === " pts" ? 0 : 2)}${stat.unit}</div>
+					<div class="shop-price">${isMaxed ? "Maximum" : `Prix: ${cost}$`}</div>
+				`;
+
+				const buyButton = document.createElement("button");
+				buyButton.type = "button";
+				buyButton.textContent = isMaxed ? "Max" : "Acheter";
+				buyButton.disabled = isMaxed || !canAfford;
+				if (isMaxed) {
+					buyButton.classList.add("owned-button");
+				} else if (!canAfford) {
+					buyButton.classList.add("danger-button");
+				}
+				buyButton.addEventListener("click", () => buyTuningUpgrade(stat.key));
+				card.appendChild(buyButton);
+				tuningGrid.appendChild(card);
+			});
+		}
+
+		function buyShopCar(carKey) {
+			const car = playerCars.find(entry => entry.key === carKey && typeof entry.shopPrice === "number");
+			if (!car || car.unlocked) {
+				return;
+			}
+			if (progression.cash < car.shopPrice) {
+				shopStatus.textContent = "Pas assez de cash pour cette voiture.";
+				return;
+			}
+
+			progression.cash -= car.shopPrice;
+			progression.unlockedCars[car.key] = true;
+			const secretUnlocked = applyProgressionToCars();
+			saveProgression();
+			updateWalletDisplay();
+			buildCarSelection();
+			buildShopMenu();
+			if (secretUnlocked.includes("Platine")) {
+				shopStatus.style.color = SECRET_COLOR;
+				shopStatus.textContent = getSecretUnlockMessage();
+			}
+		}
+
+		function buyTuningUpgrade(statKey) {
+			const stat = tuningStats.find(entry => entry.key === statKey);
+			if (!stat || !hasUnlockedPlatinum()) {
+				return;
+			}
+
+			const level = getTuningLevel(stat.key);
+			if (level >= stat.maxLevel) {
+				return;
+			}
+
+			const cost = getTuningCost(stat);
+			if (progression.cash < cost) {
+				tuningStatus.textContent = "Pas assez de cash pour ce tuning.";
+				return;
+			}
+
+			progression.cash -= cost;
+			progression.tuningLevels[stat.key] = level + 1;
+			saveProgression();
+			updateWalletDisplay();
+			buildShopMenu();
+			buildTuningMenu();
+			tuningStatus.style.color = "var(--ok)";
+			tuningStatus.textContent = `${stat.label} passe au niveau ${level + 1}.`;
+		}
+
+		function getScoreKey(modeKey, timeLimit) {
+			if (modeKey === "time") {
+				return `time_${timeLimit}`;
+			}
+			return modeKey;
+		}
+
+		function getModeLabel(modeKey, timeLimit) {
+			if (modeKey === "time") {
+				return `Time Challenge (${timeLimit}s)`;
+			}
+			return modeSettings[modeKey].label;
+		}
+
+		function renderBestScoreMenu() {
+			bestScoreList.innerHTML = "";
+			const slot = scoreSlots.find(item => item.key === activeScoreSlot) || scoreSlots[0];
+			const records = highScores[slot.key] || [];
+			bestScoreResultTitle.textContent = slot.label;
+			bestScoreResultSubtitle.textContent = `Top 5`;
+			const row = document.createElement("li");
+			row.className = "score-item";
+			const topList = records
+				.map(entry => `<li>${entry.name} · ${entry.score}</li>`)
+				.join("");
+			row.innerHTML = `<div class="score-value"><ol class="score-top5">${topList}</ol></div>`;
+			bestScoreList.appendChild(row);
+		}
+
+		function showBestScorePage(pageName, instant = false) {
+			const bestScorePages = {
+				main: bestScorePageMain,
+				classic: bestScorePageClassic,
+				time: bestScorePageTime,
+				results: bestScorePageResults
+			};
+			const nextPage = bestScorePages[pageName];
+			const currentPage = bestScorePages[activeBestScorePage];
+
+			if (!nextPage || bestScoreTransitionLock) {
+				return;
+			}
+			if (pageName === activeBestScorePage) {
+				return;
+			}
+
+			if (instant) {
+				Object.entries(bestScorePages).forEach(([key, page]) => {
+					page.classList.toggle("hidden", key !== pageName);
+					page.style.opacity = "";
+					page.style.transform = "";
+				});
+				activeBestScorePage = pageName;
+				return;
+			}
+
+			bestScoreTransitionLock = true;
+			const finishTransition = () => {
+				bestScoreTransitionLock = false;
+			};
+
+			if (currentPage) {
+				const outAnim = currentPage.animate(
+					[
+						{ opacity: 1, transform: "translateY(0px)" },
+						{ opacity: 0, transform: `translateY(-${MENU_TRANSITION_OFFSET_PX}px)` }
+					],
+					{ duration: MENU_TRANSITION_OUT_MS, easing: "cubic-bezier(0.12, 0.72, 0.24, 1)", fill: "forwards" }
+				);
+				outAnim.onfinish = () => {
+					currentPage.classList.add("hidden");
+					nextPage.classList.remove("hidden");
+					nextPage.style.opacity = "0";
+					nextPage.style.transform = `translateY(${MENU_TRANSITION_OFFSET_PX}px)`;
+					const inAnim = nextPage.animate(
+						[
+							{ opacity: 0, transform: `translateY(${MENU_TRANSITION_OFFSET_PX}px)` },
+							{ opacity: 1, transform: "translateY(0px)" }
+						],
+						{ duration: MENU_TRANSITION_IN_MS, easing: "cubic-bezier(0.12, 0.72, 0.24, 1)", fill: "forwards" }
+					);
+					inAnim.onfinish = () => {
+						nextPage.style.opacity = "";
+						nextPage.style.transform = "";
+						activeBestScorePage = pageName;
+						finishTransition();
+					};
+				};
+				outAnim.oncancel = finishTransition;
+			} else {
+				nextPage.classList.remove("hidden");
+				Object.values(bestScorePages).forEach(page => {
+					if (page !== nextPage) {
+						page.classList.add("hidden");
+					}
+				});
+				activeBestScorePage = pageName;
+				finishTransition();
+			}
+		}
+
+		function openBestScoreResults(slotKey, backPage) {
+			activeScoreSlot = slotKey;
+			bestScoreBackPage = backPage;
+			renderBestScoreMenu();
+			showBestScorePage("results");
+		}
+
+		function buildCarSelection(preservePage = false) {
+			carGrid.innerHTML = "";
+			const selectedCarStillUnlocked = game.selectedCar && game.selectedCar.unlocked;
+			const fallbackUnlockedCar = findFirstUnlockedCar();
+			const visibleCars = getVisibleCarSelectionCars();
+
+			if (!selectedCarStillUnlocked) {
+				game.selectedCar = fallbackUnlockedCar;
+			}
+
+			if (!preservePage) {
+				syncCarSelectionPageToSelectedCar();
+			}
+			const pageData = getPagedItems(visibleCars, carSelectionPage, CAR_SELECTION_PAGE_SIZE);
+			carSelectionPage = pageData.pageIndex;
+
+			pageData.items.forEach(car => {
+				const option = document.createElement("button");
+				option.type = "button";
+				option.className = "car-option";
+				option.dataset.carKey = car.key;
+				option.title = getCarLockText(car);
+				const badgeText = getCarBadgeText(car);
+				option.innerHTML = `
+					<img src="${car.src}" alt="Voiture ${car.label}">
+					<span class="car-badge">${badgeText}</span>
+				`;
+
+				if (!car.unlocked) {
+					option.classList.add("locked");
+					option.disabled = true;
+				} else if (game.selectedCar && game.selectedCar.key === car.key) {
+					option.classList.add("selected");
+					game.selectedCar = car;
+				}
+
+				option.addEventListener("click", () => {
+					if (!car.unlocked) {
+						return;
+					}
+					game.selectedCar = car;
+					[...carGrid.children].forEach(el => el.classList.remove("selected"));
+					option.classList.add("selected");
+				});
+
+				carGrid.appendChild(option);
+			});
+
+			updatePagerControls(carPrevPageBtn, carNextPageBtn, carPageInfo, carSelectionPage, pageData.totalPages);
+		}
+
+		function showStartMenuPage(pageName, instant = false) {
+			const nextPage = menuPages[pageName];
+			const currentPage = menuPages[activeMenuPage];
+
+			if (!nextPage || menuTransitionLock) {
+				return;
+			}
+			if (pageName === activeMenuPage) {
+				return;
+			}
+
+			resetOptionsStatus();
+			resetShopStatus();
+			resetTuningStatus();
+			resetMainMenuStatus();
+			hideResetConfirmPanel();
+
+			if (pageName === "tuning" && !hasUnlockedPlatinum()) {
+				return;
+			}
+
+			if (instant) {
+				Object.entries(menuPages).forEach(([key, page]) => {
+					page.classList.toggle("hidden", key !== pageName);
+					page.style.opacity = "";
+					page.style.transform = "";
+				});
+				activeMenuPage = pageName;
+				return;
+			}
+
+			menuTransitionLock = true;
+			const finishTransition = () => {
+				menuTransitionLock = false;
+			};
+
+			if (currentPage) {
+				const outAnim = currentPage.animate(
+					[
+						{ opacity: 1, transform: "translateY(0px)" },
+						{ opacity: 0, transform: `translateY(-${MENU_TRANSITION_OFFSET_PX}px)` }
+					],
+					{ duration: MENU_TRANSITION_OUT_MS, easing: "cubic-bezier(0.12, 0.72, 0.24, 1)", fill: "forwards" }
+				);
+				outAnim.onfinish = () => {
+					currentPage.classList.add("hidden");
+					nextPage.classList.remove("hidden");
+					nextPage.style.opacity = "0";
+					nextPage.style.transform = `translateY(${MENU_TRANSITION_OFFSET_PX}px)`;
+					const inAnim = nextPage.animate(
+						[
+							{ opacity: 0, transform: `translateY(${MENU_TRANSITION_OFFSET_PX}px)` },
+							{ opacity: 1, transform: "translateY(0px)" }
+						],
+						{ duration: MENU_TRANSITION_IN_MS, easing: "cubic-bezier(0.12, 0.72, 0.24, 1)", fill: "forwards" }
+					);
+					inAnim.onfinish = () => {
+						nextPage.style.opacity = "";
+						nextPage.style.transform = "";
+						activeMenuPage = pageName;
+						finishTransition();
+					};
+				};
+				outAnim.oncancel = finishTransition;
+			} else {
+				nextPage.classList.remove("hidden");
+				Object.values(menuPages).forEach(page => {
+					if (page !== nextPage) {
+						page.classList.add("hidden");
+					}
+				});
+				activeMenuPage = pageName;
+				finishTransition();
+			}
+		}
+
+		function setSelectedClassicMode(modeKey) {
+			game.selectedMode = modeKey;
+			game.timeLimit = 0;
+			carBackPage = "classic";
+			updateHudDisplay({
+				modeLabel: getModeLabel(game.selectedMode, 0),
+				score: 0,
+				speed: modeSettings[modeKey].baseSpeed,
+				timeText: "--"
+			});
+		}
+
+		function setSelectedTimeMode(seconds) {
+			game.selectedMode = "time";
+			game.timeLimit = seconds;
+			carBackPage = "time";
+			updateHudDisplay({
+				modeLabel: getModeLabel("time", seconds),
+				score: 0,
+				speed: modeSettings.time.baseSpeed,
+				timeText: formatTime(seconds)
+			});
+		}
+
+		function openCarSelection() {
+			startError.textContent = "";
+			syncCarSelectionPageToSelectedCar();
+			buildCarSelection();
+			showStartMenuPage("car");
+		}
+
+		function formatTime(seconds) {
+			const safe = Math.max(0, Math.ceil(seconds));
+			const minutes = Math.floor(safe / 60);
+			const remain = safe % 60;
+			return `${minutes}:${remain.toString().padStart(2, "0")}`;
+		}
+
+		function getHudTimeText() {
+			return game.modeConfig.timeChallenge ? formatTime(game.timeLeft) : "--";
+		}
+
+		function updateHudDisplay({
+			modeLabel = getModeLabel(game.selectedMode, game.timeLimit),
+			score = game.score,
+			speed = game.speedFactor,
+			timeText = getHudTimeText()
+		} = {}) {
+			hudMode.textContent = modeLabel;
+			hudScore.textContent = String(score);
+			hudSpeed.textContent = `${speed.toFixed(1)}x`;
+			hudTime.textContent = timeText;
+		}
+
+		function fitGameCanvas() {
+			const stageRect = gameStage.getBoundingClientRect();
+			const availableWidth = Math.max(0, stageRect.width - 4);
+			const availableHeight = Math.max(0, stageRect.height - 4);
+
+			if (!availableWidth || !availableHeight) {
+				return;
+			}
+
+			let renderWidth = Math.min(availableWidth, availableHeight * GAME_ASPECT);
+			let renderHeight = renderWidth / GAME_ASPECT;
+
+			if (renderHeight > availableHeight) {
+				renderHeight = availableHeight;
+				renderWidth = renderHeight * GAME_ASPECT;
+			}
+
+			canvas.style.width = `${Math.floor(renderWidth)}px`;
+			canvas.style.height = `${Math.floor(renderHeight)}px`;
+		}
+
+		function resetGameState() {
+			const timeLimit = game.selectedMode === "time" ? game.timeLimit : 0;
+			game.modeConfig = getEffectiveModeConfig(game.selectedMode);
+			game.running = true;
+			game.over = false;
+			game.score = 0;
+			game.speedFactor = game.modeConfig.baseSpeed;
+			game.distance = 0;
+			game.timeLimit = timeLimit;
+			game.timeLeft = timeLimit;
+			game.scoreKey = getScoreKey(game.selectedMode, game.timeLimit);
+			game.laneOffset = 0;
+			game.enemies = [];
+			game.pickups = [];
+			game.enemySpawnTimer = 0;
+			game.enemySpawnDelay = game.modeConfig.baseSpawnDelay;
+			game.pickupSpawnTimer = 0;
+			game.pickupSpawnDelay = getPickupConfigForMode(game.selectedMode)?.spawnDelay || 0;
+			game.lastTime = performance.now();
+
+			resetInputState();
+
+			recordForm.classList.add("hidden");
+			recordError.textContent = "";
+			recordNicknameInput.value = "";
+			restartBtn.disabled = false;
+			menuBtn.disabled = false;
+
+			player.x = road.x + road.width / 2 - player.width / 2;
+			player.y = canvas.height - 140;
+			player.speed = getEffectivePlayerSpeed();
+			player.sprite = images[game.selectedCar.src];
+
+			setOverlayVisibility({ start: false, best: false, gameOver: false });
+			updateHudDisplay({ score: 0 });
+		}
+
+		function updateFullscreenButtonLabel() {
+			fullscreenBtn.textContent = document.fullscreenElement ? "Fullscreen: ON" : "Fullscreen: OFF";
+		}
+
+		function disarmAutoFullscreen() {
+			autoFullscreenPending = false;
+			window.removeEventListener("pointerdown", handleInitialFullscreenGesture, true);
+			window.removeEventListener("keydown", handleInitialFullscreenGesture, true);
+		}
+
+		async function handleInitialFullscreenGesture() {
+			if (!autoFullscreenPending || document.fullscreenElement) {
+				disarmAutoFullscreen();
+				return;
+			}
+
+			try {
+				await document.documentElement.requestFullscreen();
+			} catch {
+				// Ignore refusal and leave the manual fullscreen button available.
+			}
+
+			updateFullscreenButtonLabel();
+			disarmAutoFullscreen();
+		}
+
+		function armAutoFullscreen() {
+			if (document.fullscreenElement) {
+				autoFullscreenPending = false;
+				return;
+			}
+
+			window.addEventListener("pointerdown", handleInitialFullscreenGesture, true);
+			window.addEventListener("keydown", handleInitialFullscreenGesture, true);
+		}
+
+		function requestResetProgression() {
+			showResetConfirmPanel();
+		}
+
+		async function toggleFullscreenNow() {
+			try {
+				if (!document.fullscreenElement) {
+					await document.documentElement.requestFullscreen();
+				}
+				else {
+					await document.exitFullscreen();
+				}
+			} catch {
+				startError.textContent = "Le mode fullscreen a été refusé par le navigateur.";
+			}
+			updateFullscreenButtonLabel();
+		}
+
+		function startGame() {
+			if (!game.selectedCar || !game.selectedCar.unlocked) {
+				startError.textContent = "Choisis une voiture disponible.";
+				return;
+			}
+			startError.textContent = "";
+			resetGameState();
+			requestAnimationFrame(gameLoop);
+		}
+
+		function spawnEnemy() {
+			const enemySpriteSrc = enemyCars[Math.floor(Math.random() * enemyCars.length)];
+			const enemyWidth = 42;
+			const enemyHeight = 74;
+			const margin = 8;
+			const minX = road.x + margin;
+			const maxX = road.x + road.width - margin - enemyWidth;
+
+			game.enemies.push({
+				x: minX + Math.random() * (maxX - minX),
+				y: -enemyHeight - 10,
+				width: enemyWidth,
+				height: enemyHeight,
+				speed: (game.modeConfig.enemyBaseSpeed + Math.random() * game.modeConfig.enemySpeedVariance),
+				sprite: images[enemySpriteSrc]
+			});
+		}
+
+		function spawnPickup() {
+			const pickupConfig = getPickupConfigForMode(game.selectedMode);
+			if (!pickupConfig) {
+				return;
+			}
+
+			const value = chooseWeightedPickupValue(pickupConfig.choices);
+			const width = value === 25 ? 30 : 24;
+			const height = value === 25 ? 30 : 24;
+			const margin = 12;
+			const minX = road.x + margin;
+			const maxX = road.x + road.width - margin - width;
+
+			game.pickups.push({
+				x: minX + Math.random() * (maxX - minX),
+				y: -height - 12,
+				width,
+				height,
+				value,
+				speed: 135 + Math.random() * 40,
+				sprite: images[value === 25 ? MONEY_25_SRC : MONEY_5_SRC]
+			});
+		}
+
+		function update(deltaMs) {
+			const dt = deltaMs / 1000;
+			const left = keyState.ArrowLeft || keyState.a;
+			const right = keyState.ArrowRight || keyState.d;
+			const up = keyState.ArrowUp || keyState.w;
+			const down = keyState.ArrowDown || keyState.s;
+
+			const horizontal = (right ? 1 : 0) - (left ? 1 : 0);
+			const vertical = (down ? 1 : 0) - (up ? 1 : 0);
+
+			player.x += horizontal * player.speed * dt;
+			player.y += vertical * player.speed * 0.55 * dt;
+
+			if (up) {
+				game.speedFactor += game.modeConfig.accelUp * dt;
+			}
+			if (down) {
+				game.speedFactor -= game.modeConfig.decelDown * dt;
+			}
+			game.speedFactor = clamp(game.speedFactor, game.modeConfig.minSpeed, game.modeConfig.maxSpeed);
+
+			const minX = road.x + 5;
+			const maxX = road.x + road.width - player.width - 5;
+			player.x = clamp(player.x, minX, maxX);
+			player.y = clamp(player.y, 20, canvas.height - player.height - 20);
+
+			game.distance += game.modeConfig.scoreRate * game.speedFactor * dt;
+			game.score = Math.floor(game.distance);
+			game.enemySpawnDelay = clamp(
+				game.modeConfig.baseSpawnDelay - (game.speedFactor - game.modeConfig.minSpeed) * 220,
+				game.modeConfig.minSpawnDelay,
+				game.modeConfig.baseSpawnDelay
+			);
+			game.laneOffset += 360 * game.speedFactor * dt;
+			if (game.laneOffset > 60) {
+				game.laneOffset -= 60;
+			}
+
+			if (game.modeConfig.timeChallenge) {
+				game.timeLeft -= dt;
+				if (game.timeLeft <= 0) {
+					triggerEndState(true);
+					return;
+				}
+			}
+
+			game.enemySpawnTimer += deltaMs;
+			if (game.enemySpawnTimer >= game.enemySpawnDelay) {
+				game.enemySpawnTimer = 0;
+				spawnEnemy();
+			}
+
+			const pickupConfig = getPickupConfigForMode(game.selectedMode);
+			if (pickupConfig) {
+				game.pickupSpawnTimer += deltaMs;
+				if (game.pickupSpawnTimer >= game.pickupSpawnDelay) {
+					game.pickupSpawnTimer = 0;
+					game.pickupSpawnDelay = pickupConfig.spawnDelay + (Math.random() * 480 - 140);
+					spawnPickup();
+				}
+			}
+
+			const enemyBoost = game.modeConfig.enemyFlowBoost * game.speedFactor * dt;
+			game.enemies.forEach(enemy => {
+				enemy.y += (enemy.speed * dt) + enemyBoost;
+			});
+			game.pickups.forEach(pickup => {
+				pickup.y += (pickup.speed * dt) + enemyBoost * 0.85;
+			});
+
+			game.enemies = game.enemies.filter(enemy => enemy.y < canvas.height + 90);
+			game.pickups = game.pickups.filter(pickup => pickup.y < canvas.height + 60);
+
+			const collected = [];
+			game.pickups = game.pickups.filter(pickup => {
+				const hitPickup = isColliding(player, pickup);
+				if (hitPickup) {
+					collected.push(pickup.value);
+				}
+				return !hitPickup;
+			});
+
+			if (collected.length) {
+				progression.cash += collected.reduce((sum, value) => sum + value, 0);
+				saveProgression();
+				updateWalletDisplay();
+				if (activeMenuPage === "shop") {
+					buildShopMenu();
+				}
+			}
+
+			const hit = game.enemies.some(enemy => isColliding(player, enemy));
+			if (hit) {
+				triggerEndState(false);
+				return;
+			}
+
+			updateHudDisplay();
+		}
+
+		function isColliding(a, b) {
+			const inset = 6;
+			return !(
+				a.x + a.width - inset < b.x + inset ||
+				a.x + inset > b.x + b.width - inset ||
+				a.y + a.height - inset < b.y + inset ||
+				a.y + inset > b.y + b.height - inset
+			);
+		}
+
+		function drawRoad() {
+			ctx.fillStyle = "#2c8b35";
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			ctx.fillStyle = "#3f3f3f";
+			ctx.fillRect(road.x, road.y, road.width, road.height);
+
+			ctx.strokeStyle = "#f4f4f4";
+			ctx.lineWidth = 4;
+			ctx.beginPath();
+			ctx.moveTo(road.x + 2, 0);
+			ctx.lineTo(road.x + 2, canvas.height);
+			ctx.moveTo(road.x + road.width - 2, 0);
+			ctx.lineTo(road.x + road.width - 2, canvas.height);
+			ctx.stroke();
+
+			ctx.strokeStyle = "#ffe8a3";
+			ctx.lineWidth = 3;
+			ctx.setLineDash([24, 18]);
+			ctx.lineDashOffset = -game.laneOffset;
+
+			const lane1 = road.x + road.width / 3;
+			const lane2 = road.x + (road.width / 3) * 2;
+
+			ctx.beginPath();
+			ctx.moveTo(lane1, 0);
+			ctx.lineTo(lane1, canvas.height);
+			ctx.moveTo(lane2, 0);
+			ctx.lineTo(lane2, canvas.height);
+			ctx.stroke();
+			ctx.setLineDash([]);
+
+			for (let y = -40; y < canvas.height + 40; y += 70) {
+				const py = ((y + game.laneOffset * 1.5) % (canvas.height + 80)) - 40;
+				ctx.fillStyle = "rgba(255,255,255,0.15)";
+				ctx.fillRect(road.x - 35, py, 14, 6);
+				ctx.fillRect(road.x + road.width + 21, py, 14, 6);
+			}
+		}
+
+		function drawCars() {
+			game.pickups.forEach(pickup => {
+				ctx.drawImage(pickup.sprite, pickup.x, pickup.y, pickup.width, pickup.height);
+			});
+			if (player.sprite) {
+				if (game.selectedCar && game.selectedCar.key === "platinum") {
+					const shimmer = 0.5 + 0.5 * Math.sin(performance.now() / 180);
+					platinumFxCanvas.width = player.width;
+					platinumFxCanvas.height = player.height;
+					platinumFxCtx.clearRect(0, 0, player.width, player.height);
+					platinumFxCtx.drawImage(player.sprite, 0, 0, player.width, player.height);
+					platinumFxCtx.globalCompositeOperation = "source-atop";
+					const holoGradient = platinumFxCtx.createLinearGradient(0, 0, player.width, player.height);
+					holoGradient.addColorStop(0, `rgba(140, 255, 255, ${0.34 + shimmer * 0.2})`);
+					holoGradient.addColorStop(0.5, `rgba(255, 255, 255, ${0.22 + shimmer * 0.18})`);
+					holoGradient.addColorStop(1, `rgba(166, 200, 255, ${0.3 + shimmer * 0.18})`);
+					platinumFxCtx.fillStyle = holoGradient;
+					platinumFxCtx.fillRect(0, 0, player.width, player.height);
+					platinumFxCtx.globalCompositeOperation = "source-over";
+
+					ctx.save();
+					ctx.globalAlpha = 0.18 + shimmer * 0.08;
+					ctx.drawImage(platinumFxCanvas, player.x - 2, player.y, player.width, player.height);
+					ctx.drawImage(platinumFxCanvas, player.x + 2, player.y, player.width, player.height);
+					ctx.drawImage(platinumFxCanvas, player.x, player.y - 2, player.width, player.height);
+					ctx.drawImage(platinumFxCanvas, player.x, player.y + 2, player.width, player.height);
+					ctx.globalAlpha = 1;
+					ctx.shadowColor = `rgba(142, 252, 255, ${0.4 + shimmer * 0.28})`;
+					ctx.shadowBlur = 14 + shimmer * 10;
+					ctx.drawImage(platinumFxCanvas, player.x, player.y, player.width, player.height);
+					ctx.restore();
+				} else {
+					ctx.drawImage(player.sprite, player.x, player.y, player.width, player.height);
+				}
+			}
+			game.enemies.forEach(enemy => {
+				ctx.drawImage(enemy.sprite, enemy.x, enemy.y, enemy.width, enemy.height);
+			});
+		}
+
+		function render() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			drawRoad();
+			drawCars();
+		}
+
+		function gameLoop(timestamp) {
+			if (!game.running) {
+				return;
+			}
+			const deltaMs = Math.min(40, timestamp - game.lastTime);
+			game.lastTime = timestamp;
+
+			update(deltaMs);
+			render();
+
+			if (game.running) {
+				requestAnimationFrame(gameLoop);
+			}
+		}
+
+		function triggerEndState(hasWonTimeChallenge) {
+			game.running = false;
+			game.over = true;
+			let unlockedCars = [];
+
+			if (hasWonTimeChallenge) {
+				unlockedCars = unlockRewardCarsForTimeLimit(game.timeLimit);
+				gameOverTitle.textContent = "CHALLENGE TERMINÉ";
+				gameOverText.textContent = `Tu as survécu ${formatTime(game.timeLimit)} ! Score: ${game.score}`;
+				if (unlockedCars.length) {
+					gameOverText.textContent += ` Nouvelle voiture débloquée: ${unlockedCars.join(", ")}.`;
+					if (unlockedCars.includes("Platine")) {
+						gameOverText.textContent += ` ${getSecretUnlockMessage()}`;
+					}
+				}
+			} else {
+				gameOverTitle.textContent = "GAME OVER";
+				gameOverText.textContent = `Tu as heurté une voiture ennemie ! Score: ${game.score}`;
+				if (!game.modeConfig.timeChallenge) {
+					gameOverText.textContent += ` Cash total: ${progression.cash}$.`;
+				}
+			}
+
+			openRecordPromptIfNeeded();
+			setOverlayVisibility({ start: false, best: false, gameOver: true });
+		}
+
+		function openRecordPromptIfNeeded() {
+			const existingTop = (highScores[game.scoreKey] && highScores[game.scoreKey][0]) || { name: "---", score: 0 };
+			const isNewRecord = game.score > existingTop.score;
+
+			recordForm.classList.toggle("hidden", !isNewRecord);
+			recordError.textContent = "";
+			recordNicknameInput.value = "";
+
+			if (isNewRecord) {
+				restartBtn.disabled = true;
+				menuBtn.disabled = true;
+				recordNicknameInput.focus();
+			} else {
+				restartBtn.disabled = false;
+				menuBtn.disabled = false;
+			}
+		}
+
+		function saveRecord() {
+			const nickname = recordNicknameInput.value.trim();
+			if (!nickname) {
+				recordError.textContent = "Entre un surnom pour enregistrer ton record.";
+				return;
+			}
+
+			const currentTop = Array.isArray(highScores[game.scoreKey]) ? highScores[game.scoreKey] : [];
+			highScores[game.scoreKey] = currentTop
+				.concat([{ name: nickname, score: game.score }])
+				.sort((a, b) => b.score - a.score)
+				.slice(0, 5);
+			saveHighScores();
+			renderBestScoreMenu();
+
+			recordForm.classList.add("hidden");
+			restartBtn.disabled = false;
+			menuBtn.disabled = false;
+			gameOverText.textContent += ` Record enregistré pour ${getModeLabel(game.selectedMode, game.timeLimit)}.`;
+		}
+
+		function backToMenu() {
+			game.running = false;
+			game.over = false;
+			setOverlayVisibility({ start: true, best: false, gameOver: false });
+			showStartMenuPage("main");
+			updateHudDisplay({
+				modeLabel: getModeLabel(game.selectedMode, game.timeLimit),
+				score: 0,
+				speed: modeSettings[game.selectedMode].baseSpeed,
+				timeText: game.selectedMode === "time" ? formatTime(game.timeLimit) : "--"
+			});
+		}
+
+		function openBestScores() {
+			activeScoreSlot = game.scoreKey || activeScoreSlot;
+			showBestScorePage("main", true);
+			setOverlayVisibility({ start: true, best: true, gameOver: false });
+		}
+
+		function attemptQuitGame() {
+			resetMainMenuStatus();
+			window.close();
+			window.setTimeout(() => {
+				if (!window.closed) {
+					mainMenuStatus.textContent = "Le navigateur a refusé de fermer cette fenêtre automatiquement.";
+				}
+			}, 120);
+		}
+
+		function onKeyChange(e, isDown) {
+			const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+			const target = e.target;
+			const isTextInput =
+				target instanceof HTMLElement &&
+				(target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+
+			if (isTextInput) {
+				return;
+			}
+
+			if (key in keyState) {
+				keyState[key] = isDown;
+				e.preventDefault();
+			}
+		}
+
+		startBtn.addEventListener("click", startGame);
+		goModePageBtn.addEventListener("click", () => showStartMenuPage("mode"));
+		goShopPageBtn.addEventListener("click", () => {
+			shopPage = 0;
+			buildShopMenu();
+			showStartMenuPage("shop");
+		});
+		goTuningPageBtn.addEventListener("click", () => {
+			resetTuningStatus();
+			buildTuningMenu();
+			showStartMenuPage("tuning");
+		});
+		goOptionsPageBtn.addEventListener("click", () => showStartMenuPage("options"));
+		backToMainBtn.addEventListener("click", () => showStartMenuPage("main"));
+		backToMainFromShopBtn.addEventListener("click", () => showStartMenuPage("main"));
+		backToMainFromTuningBtn.addEventListener("click", () => showStartMenuPage("main"));
+		backToMainFromOptionsBtn.addEventListener("click", () => showStartMenuPage("main"));
+		chooseClassicRaceBtn.addEventListener("click", () => showStartMenuPage("classic"));
+		chooseTimeRaceBtn.addEventListener("click", () => showStartMenuPage("time"));
+		chooseEasyModeBtn.addEventListener("click", () => {
+			setSelectedClassicMode("easy");
+			openCarSelection();
+		});
+		chooseNormalModeBtn.addEventListener("click", () => {
+			setSelectedClassicMode("normal");
+			openCarSelection();
+		});
+		chooseHardModeBtn.addEventListener("click", () => {
+			setSelectedClassicMode("nes");
+			openCarSelection();
+		});
+		chooseTime30Btn.addEventListener("click", () => {
+			setSelectedTimeMode(30);
+			openCarSelection();
+		});
+		chooseTime60Btn.addEventListener("click", () => {
+			setSelectedTimeMode(60);
+			openCarSelection();
+		});
+		chooseTime90Btn.addEventListener("click", () => {
+			setSelectedTimeMode(90);
+			openCarSelection();
+		});
+		backToModeTypeBtn.addEventListener("click", () => showStartMenuPage("mode"));
+		backToModeTypeFromTimeBtn.addEventListener("click", () => showStartMenuPage("mode"));
+		backToModeBtn.addEventListener("click", () => showStartMenuPage(carBackPage));
+		carPrevPageBtn.addEventListener("click", () => {
+			carSelectionPage = Math.max(0, carSelectionPage - 1);
+			buildCarSelection(true);
+		});
+		carNextPageBtn.addEventListener("click", () => {
+			carSelectionPage += 1;
+			buildCarSelection(true);
+		});
+		shopPrevPageBtn.addEventListener("click", () => {
+			shopPage = Math.max(0, shopPage - 1);
+			buildShopMenu();
+		});
+		shopNextPageBtn.addEventListener("click", () => {
+			shopPage += 1;
+			buildShopMenu();
+		});
+		bestScoreBtn.addEventListener("click", openBestScores);
+		bestScoreClassicBtn.addEventListener("click", () => showBestScorePage("classic"));
+		bestScoreTimeBtn.addEventListener("click", () => showBestScorePage("time"));
+		bestScoreEasyBtn.addEventListener("click", () => openBestScoreResults("easy", "classic"));
+		bestScoreNormalBtn.addEventListener("click", () => openBestScoreResults("normal", "classic"));
+		bestScoreHardBtn.addEventListener("click", () => openBestScoreResults("nes", "classic"));
+		bestScore30Btn.addEventListener("click", () => openBestScoreResults("time_30", "time"));
+		bestScore60Btn.addEventListener("click", () => openBestScoreResults("time_60", "time"));
+		bestScore90Btn.addEventListener("click", () => openBestScoreResults("time_90", "time"));
+		bestScoreBackToMainBtn.addEventListener("click", () => showBestScorePage("main"));
+		bestScoreBackToMainFromTimeBtn.addEventListener("click", () => showBestScorePage("main"));
+		bestScoreBackBtn.addEventListener("click", () => showBestScorePage(bestScoreBackPage));
+		fullscreenBtn.addEventListener("click", toggleFullscreenNow);
+		resetSaveBtn.addEventListener("click", requestResetProgression);
+		confirmResetBtn.addEventListener("click", resetProgression);
+		cancelResetBtn.addEventListener("click", () => {
+			hideResetConfirmPanel();
+			resetOptionsStatus();
+		});
+		document.addEventListener("fullscreenchange", () => {
+			updateFullscreenButtonLabel();
+		});
+		closeBestScoreBtn.addEventListener("click", () => {
+			showBestScorePage("main");
+			setOverlayVisibility({ start: true, best: false, gameOver: false });
+		});
+		restartBtn.addEventListener("click", () => {
+			resetGameState();
+			requestAnimationFrame(gameLoop);
+		});
+		menuBtn.addEventListener("click", backToMenu);
+		saveRecordBtn.addEventListener("click", saveRecord);
+
+		recordNicknameInput.addEventListener("keydown", e => {
+			if (e.key === "Enter") {
+				saveRecord();
+			}
+		});
+
+		window.addEventListener("keydown", e => onKeyChange(e, true), { passive: false });
+		window.addEventListener("keyup", e => onKeyChange(e, false), { passive: false });
+		window.addEventListener("resize", fitGameCanvas);
+		window.addEventListener("orientationchange", fitGameCanvas);
+
+		function drawLoadingScreen() {
+			ctx.fillStyle = "#0f1220";
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = "#ffd048";
+			ctx.font = "bold 32px Segoe UI";
+			ctx.textAlign = "center";
+			ctx.fillText("Retro Car Racer", canvas.width / 2, canvas.height / 2 - 20);
+			ctx.fillStyle = "#e9ecff";
+			ctx.font = "20px Segoe UI";
+			ctx.fillText("Chargement...", canvas.width / 2, canvas.height / 2 + 26);
+		}
+
+		function drawErrorScreen(message) {
+			ctx.fillStyle = "#1a0f0f";
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = "#ff8f8f";
+			ctx.font = "bold 23px Segoe UI";
+			ctx.textAlign = "center";
+			ctx.fillText("Erreur de chargement", canvas.width / 2, canvas.height / 2 - 24);
+			ctx.fillStyle = "#ffd9d9";
+			ctx.font = "16px Segoe UI";
+			ctx.fillText(message, canvas.width / 2, canvas.height / 2 + 10);
+			ctx.fillText("Vérifie le dossier des assets.", canvas.width / 2, canvas.height / 2 + 38);
+		}
+
+		(async function init() {
+			fitGameCanvas();
+			drawLoadingScreen();
+			applyProgressionToCars();
+			updateWalletDisplay();
+			buildTuningMenu();
+			carSelectionPage = 0;
+			shopPage = 0;
+			buildCarSelection();
+			buildShopMenu();
+			showStartMenuPage("main", true);
+			setSelectedClassicMode("normal");
+			showBestScorePage("main");
+			renderBestScoreMenu();
+			updateFullscreenButtonLabel();
+			armAutoFullscreen();
+			try {
+				await loadAssets();
+				fitGameCanvas();
+				render();
+			} catch (error) {
+				drawErrorScreen(error.message);
+				startError.textContent = "Assets introuvables. Vérifie le dossier Retro Car Racer.";
+			}
+		})();
+	</script>
+</body>
+</html>

@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>The Folf Hub</title>
+	<style>
+		:root {
+			--lavender-main: #a984db;
+			--lavender-dark: #8263b1;
+			--lavender-light: #f3effa;
+			--dark-bg: #2d2a32;
+			--text-main: #333;
+			--card-bg: rgba(255, 255, 255, 0.95);
+			--border-soft: #e6dbf8;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			font-family: 'Segoe UI', sans-serif;
+			margin: 0;
+			color: var(--text-main);
+			min-height: 100vh;
+			overflow: hidden;
+			background-color: #1e1b20;
+			position: relative;
+			display: flex;
+		}
+
+		#star-canvas {
+			position: fixed;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			z-index: -1;
+		}
+
+		.sidebar {
+			width: 320px;
+			background: var(--dark-bg);
+			color: white;
+			height: 100vh;
+			padding: 20px;
+			position: fixed;
+			box-shadow: 4px 0 10px rgba(0,0,0,0.25);
+			z-index: 10;
+			overflow-y: auto;
+		}
+
+		.sidebar h1 {
+			margin-top: 0;
+			color: var(--lavender-main);
+			border-bottom: 2px solid var(--lavender-main);
+			padding-bottom: 10px;
+			font-size: 1.4em;
+		}
+
+		.menu-group { margin-bottom: 12px; }
+
+		.menu-btn {
+			width: 100%;
+			border: 1px solid #514c58;
+			background: #3a3640;
+			color: white;
+			border-radius: 8px;
+			padding: 12px;
+			text-align: left;
+			font-weight: 700;
+			cursor: pointer;
+			transition: 0.2s;
+		}
+
+		.menu-btn:hover, .menu-btn.active {
+			background: var(--lavender-main);
+			border-color: var(--lavender-main);
+		}
+
+		.app-dropdown {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.3s ease;
+			margin-top: 8px;
+		}
+
+		.app-dropdown.open { max-height: 180px; }
+
+		.app-link {
+			display: block;
+			background: #4a4552;
+			color: white;
+			text-decoration: none;
+			border: 1px solid #5a5464;
+			padding: 10px;
+			border-radius: 8px;
+			margin-bottom: 8px;
+			font-size: 0.95em;
+		}
+
+		.app-link:hover {
+			background: var(--lavender-dark);
+			border-color: var(--lavender-dark);
+		}
+
+		.main-content {
+			margin-left: 320px;
+			padding: 30px;
+			width: calc(100% - 320px);
+			height: 100vh;
+			overflow-y: auto;
+			position: relative;
+			z-index: 2;
+		}
+
+		.main-content.blog-active {
+			padding: 0;
+			overflow: hidden;
+		}
+
+		.panel {
+			display: none;
+			background: var(--card-bg);
+			border-radius: 14px;
+			padding: 24px;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+			backdrop-filter: blur(4px);
+			margin-bottom: 20px;
+		}
+
+		.panel.active { display: block; }
+
+		h2 {
+			margin-top: 0;
+			color: var(--lavender-dark);
+			border-bottom: 2px solid var(--lavender-main);
+			padding-bottom: 8px;
+		}
+
+		.form-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+
+		.form-full { grid-column: 1 / -1; }
+
+		label {
+			display: block;
+			font-size: 0.9em;
+			margin-bottom: 6px;
+			color: #555;
+			font-weight: 600;
+		}
+
+		input, textarea {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #d8caef;
+			border-radius: 8px;
+			font-family: inherit;
+			font-size: 0.95em;
+			background: white;
+			color: var(--text-main);
+		}
+
+		textarea { resize: vertical; min-height: 90px; }
+
+		.btn-primary {
+			background: var(--lavender-main);
+			color: white;
+			border: none;
+			padding: 11px 14px;
+			border-radius: 8px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: 0.2s;
+		}
+
+		.btn-primary:hover { background: var(--lavender-dark); }
+
+		.btn-secondary {
+			background: #6f6f78;
+			color: white;
+			border: none;
+			padding: 11px 14px;
+			border-radius: 8px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: 0.2s;
+		}
+
+		.btn-secondary:hover { background: #5e5e66; }
+
+		.post-actions {
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-end;
+			align-items: flex-end;
+			gap: 6px;
+			margin-top: 0;
+		}
+
+		.post-actions .btn-primary,
+		.post-actions .btn-secondary {
+			padding: 6px 10px;
+			min-width: 46px;
+			text-align: center;
+		}
+
+		.comment-row {
+			display: flex;
+			gap: 8px;
+			align-items: flex-end;
+		}
+
+		.comment-row .rich-editor {
+			flex: 1;
+		}
+
+		.preview-title {
+			font-weight: 700;
+			color: var(--lavender-dark);
+			margin-bottom: 8px;
+		}
+
+		.preview-modal {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.45);
+			z-index: 50;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+		}
+
+		.preview-modal.show {
+			display: flex;
+		}
+
+		.preview-modal-content {
+			width: min(620px, 100%);
+			max-height: 70vh;
+			overflow-y: auto;
+			background: white;
+			border-radius: 12px;
+			border: 1px solid #e6dbf8;
+			box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+			padding: 14px;
+		}
+
+		.preview-modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+
+		.preview-close {
+			border: 1px solid #d8caef;
+			background: #f7f2ff;
+			color: #c53d3d;
+			border-radius: 6px;
+			padding: 4px 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.color-modal {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.35);
+			z-index: 55;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+		}
+
+		.color-modal.show { display: flex; }
+
+		.color-modal-content {
+			width: min(320px, 100%);
+			background: white;
+			border: 1px solid #e6dbf8;
+			border-radius: 12px;
+			padding: 14px;
+			box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+		}
+
+		.color-modal-title {
+			font-weight: 700;
+			color: var(--lavender-dark);
+			margin-bottom: 10px;
+		}
+
+		.color-modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 8px;
+			margin-top: 12px;
+		}
+
+		.color-picker {
+			width: 100%;
+			height: 40px;
+			border: 1px solid #d6c7ef;
+			border-radius: 8px;
+			padding: 4px;
+			cursor: pointer;
+		}
+
+		.blog-list {
+			margin-top: 16px;
+			display: grid;
+			gap: 12px;
+		}
+
+		.blog-card {
+			background: white;
+			border: 1px solid var(--border-soft);
+			border-radius: 12px;
+			padding: 16px;
+			margin-bottom: 16px;
+		}
+
+		#panelBlog {
+			background: transparent;
+			box-shadow: none;
+			padding: 0;
+			margin: 0;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		.main-content.blog-active #panelBlog {
+			padding: 12px 16px 0;
+		}
+
+		.blog-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			margin-bottom: 8px;
+		}
+
+		.blog-header h2 {
+			margin: 0;
+			flex: 1;
+		}
+
+		#blogLayout {
+			display: grid;
+			grid-template-rows: 1fr auto;
+			gap: 12px;
+			flex: 1;
+			min-height: 0;
+		}
+
+		#blogPostsCard {
+			overflow: hidden;
+			background: transparent;
+			border-color: transparent;
+			box-shadow: none;
+			padding: 0;
+			margin-bottom: 0;
+		}
+
+		#blogPostsCard .blog-list {
+			height: 100%;
+			overflow-y: auto;
+			padding-right: 4px;
+			margin-top: 0;
+		}
+
+		#blogComposerCard {
+			position: sticky;
+			bottom: 0;
+			margin-bottom: 0;
+			padding: 12px 14px;
+		}
+
+		#blogComposerCard.collapsed {
+			display: none;
+		}
+
+		.composer-header {
+			display: flex;
+			justify-content: flex-end;
+			margin-bottom: 6px;
+		}
+
+		.composer-collapse-btn {
+			border: 1px solid #d8caef;
+			background: #f7f2ff;
+			color: #5b4a77;
+			border-radius: 6px;
+			padding: 2px 10px;
+			font-weight: 700;
+			cursor: pointer;
+			line-height: 1;
+		}
+
+		.composer-expand-btn {
+			display: none;
+			border: 1px solid #d8caef;
+			background: #f7f2ff;
+			color: #5b4a77;
+			border-radius: 8px;
+			padding: 4px 12px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		#panelBlog.composer-collapsed .composer-expand-btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#blogComposerCard .form-grid {
+			grid-template-columns: minmax(160px, 220px) 1fr;
+			gap: 8px;
+			margin-bottom: 8px;
+		}
+
+		#panelBlog > .blog-card:first-of-type {
+			background: transparent;
+			border-color: transparent;
+			box-shadow: none;
+			padding: 0;
+		}
+
+		#panelBlog .blog-header h2 {
+			color: var(--lavender-main);
+			text-shadow:
+				-1px -1px 0 #fff,
+				 1px -1px 0 #fff,
+				-1px  1px 0 #fff,
+				 1px  1px 0 #fff;
+			border-bottom: none;
+			padding-bottom: 0;
+			box-shadow: none;
+		}
+
+		#panelBlog.composer-collapsed #blogLayout {
+			grid-template-rows: 1fr;
+			gap: 0;
+			min-height: 0;
+		}
+
+		.card {
+			background: white;
+			border: 1px solid var(--border-soft);
+			border-radius: 12px;
+			padding: 14px;
+		}
+
+		.card-head {
+			display: flex;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-bottom: 10px;
+		}
+
+		.card-head-right {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.btn-delete-post {
+			border: 1px solid #f0d2d2;
+			background: #fff6f6;
+			color: #b74444;
+			border-radius: 6px;
+			padding: 4px 8px;
+			font-size: 0.8em;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.btn-delete-post:hover {
+			background: #ffeaea;
+		}
+
+		.btn-edit-post {
+			border: 1px solid #d8caef;
+			background: #f7f2ff;
+			color: #5b4a77;
+			border-radius: 6px;
+			padding: 4px 8px;
+			font-size: 0.8em;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.btn-edit-post:hover {
+			background: #eee3ff;
+		}
+
+		.meta { font-size: 0.85em; color: #666; }
+
+		.post-link {
+			color: var(--lavender-dark);
+			font-weight: 700;
+			text-decoration: none;
+			word-break: break-all;
+		}
+
+		.post-link:hover { text-decoration: underline; }
+
+		.post-image {
+			margin-top: 10px;
+			max-width: 100%;
+			border-radius: 10px;
+			border: 1px solid #eee;
+		}
+
+		.poll {
+			margin-top: 12px;
+			border-top: 1px dashed #ddd;
+			padding-top: 12px;
+		}
+
+		.poll-option {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+			margin-bottom: 8px;
+			background: #faf7ff;
+			border: 1px solid #ede4fb;
+			border-radius: 8px;
+			padding: 8px 10px;
+		}
+
+		.vote-btn {
+			border: none;
+			background: var(--lavender-main);
+			color: white;
+			border-radius: 6px;
+			padding: 6px 10px;
+			cursor: pointer;
+			font-size: 0.85em;
+			font-weight: 700;
+		}
+
+		.vote-btn:hover { background: var(--lavender-dark); }
+
+		.editor-toolbar {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			background: #f8f3ff;
+			border: 1px solid #e8dcfa;
+			border-radius: 8px;
+			padding: 6px;
+			margin-bottom: 6px;
+			max-height: 78px;
+			overflow-y: auto;
+		}
+
+		.editor-toolbar.collapsed {
+			display: none;
+		}
+
+		.tool-btn {
+			border: 1px solid #d6c7ef;
+			background: white;
+			color: var(--text-main);
+			border-radius: 5px;
+			padding: 4px 8px;
+			font-weight: 700;
+			font-size: 0.9em;
+			cursor: pointer;
+		}
+
+		.tool-btn:hover {
+			background: var(--lavender-light);
+			border-color: var(--lavender-main);
+		}
+
+		.rich-editor {
+			width: 100%;
+			min-height: 96px;
+			padding: 8px;
+			border: 1px solid #d8caef;
+			border-radius: 8px;
+			background: white;
+			font-size: 0.95em;
+			line-height: 1.45;
+		}
+
+		.rich-editor::placeholder { color: #888; }
+
+		.post-comment {
+			line-height: 1.45;
+		}
+
+		.post-comment ul,
+		.post-comment ol {
+			margin: 8px 0 8px 22px;
+		}
+
+
+		.empty {
+			color: #666;
+			font-style: italic;
+			padding: 8px 0;
+		}
+
+		@media (max-width: 980px) {
+			.sidebar { width: 260px; }
+			.main-content { margin-left: 260px; width: calc(100% - 260px); }
+			.main-content.blog-active #panelBlog { padding: 10px 12px 0; }
+			.form-grid { grid-template-columns: 1fr; }
+			#blogLayout { min-height: 0; }
+			.comment-row { align-items: stretch; }
+			#blogComposerCard .form-grid { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+<body>
+	<canvas id="star-canvas"></canvas>
+
+	<aside class="sidebar">
+		<h1>Page Principale</h1>
+
+		<div class="menu-group">
+			<button id="btnApp" class="menu-btn" type="button">APP ▾</button>
+			<div id="appDropdown" class="app-dropdown">
+				<a class="app-link" href="MyVault.html" target="_blank" rel="noopener noreferrer">🔏 MyVault</a>
+			</div>
+		</div>
+
+		<div class="menu-group">
+			<button id="btnGame" class="menu-btn" type="button">GAME ▾</button>
+			<div id="gameDropdown" class="app-dropdown">
+				<a class="app-link" href="RetroCarRacer.html" target="_blank" rel="noopener noreferrer">🏁 RetroCarRacer</a>
+			</div>
+		</div>
+
+		<div class="menu-group">
+			<button id="btnBlog" class="menu-btn active" type="button">BLOG</button>
+		</div>
+	</aside>
+
+	<main class="main-content">
+		<section id="panelBlog" class="panel active">
+			<div class="blog-header">
+				<h2>BLOG</h2>
+				<button id="expandComposerBtn" class="composer-expand-btn" type="button" title="Ouvrir la carte">+</button>
+			</div>
+			<div id="blogLayout">
+				<div id="blogPostsCard" class="blog-card">
+					<div id="blogList" class="blog-list"></div>
+				</div>
+
+				<div id="blogComposerCard" class="blog-card">
+					<div class="composer-header">
+						<button id="collapseComposerBtn" class="composer-collapse-btn" type="button" title="Réduire la carte">-</button>
+					</div>
+
+					<div class="form-grid">
+						<div>
+							<input id="blogAuthor" type="text" placeholder="Nom de l'auteur">
+						</div>
+						<div class="form-full">
+							<div class="editor-toolbar" id="blogToolbar">
+								<button class="tool-btn" type="button" data-action="bold" title="Caractère gras">𝐁</button>
+								<button class="tool-btn" type="button" data-action="italic" title="Italique">𝘐</button>
+								<button class="tool-btn" type="button" data-action="underline" title="Souligner">U̲</button>
+								<button class="tool-btn" type="button" data-action="strike" title="Biffer">S̶</button>
+								<button class="tool-btn" type="button" data-action="textColor" title="Couleur du texte">🎨</button>
+								<button class="tool-btn" type="button" data-action="bgColor" title="Couleur arrière texte">✏️</button>
+								<button class="tool-btn" type="button" data-action="orderedList" title="Liste numérotée">🔢</button>
+								<button class="tool-btn" type="button" data-action="unorderedList" title="Liste à points">⚫️</button>
+								<button class="tool-btn" type="button" data-action="alignLeft" title="Aligner à gauche">←</button>
+								<button class="tool-btn" type="button" data-action="alignCenter" title="Aligner au centre">↔</button>
+								<button class="tool-btn" type="button" data-action="alignRight" title="Aligner à droite">→</button>
+								<button class="tool-btn" type="button" data-action="insertLink" title="Insérer un lien">🔗</button>
+								<button class="tool-btn" type="button" data-action="insertImage" title="Insérer une image URL">📷</button>
+								<button class="tool-btn" type="button" data-action="insertPoll" title="Insérer un template poll">📊</button>
+							</div>
+							<div class="comment-row">
+								<textarea id="blogComment" class="rich-editor" placeholder="Votre publication..."></textarea>
+								<div class="post-actions">
+									<button class="btn-secondary" type="button" id="toggleToolbarBtn" title="Replier outils">🔧</button>
+									<button class="btn-secondary" type="button" id="previewBlogPostBtn" title="Aperçu">🔍</button>
+									<button class="btn-primary" type="button" id="addBlogPostBtn" title="Publier">📨</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			</div>
+		</section>
+
+		<div id="blogPreviewModal" class="preview-modal">
+			<div class="preview-modal-content">
+				<div class="preview-modal-header">
+					<div class="preview-title">Aperçu du commentaire</div>
+					<button id="closeBlogPreviewBtn" class="preview-close" type="button">X</button>
+				</div>
+				<div id="blogPreviewContent"></div>
+			</div>
+		</div>
+
+		<div id="colorPickerModal" class="color-modal">
+			<div class="color-modal-content">
+				<div id="colorPickerTitle" class="color-modal-title">Sélectionner une couleur</div>
+				<input id="colorPickerInput" class="color-picker" type="color" value="#333333">
+				<div class="color-modal-actions">
+					<button id="cancelColorBtn" class="btn-secondary" type="button">Annuler</button>
+					<button id="applyColorBtn" class="btn-primary" type="button">Ok</button>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<script>
+		const BLOG_KEY = 'MainPage_BlogPosts';
+
+		let blogPosts = JSON.parse(localStorage.getItem(BLOG_KEY)) || [];
+
+		const btnApp = document.getElementById('btnApp');
+		const btnBlog = document.getElementById('btnBlog');
+		const appDropdown = document.getElementById('appDropdown');
+		const btnGame = document.getElementById('btnGame');
+		const gameDropdown = document.getElementById('gameDropdown');
+		const panelBlog = document.getElementById('panelBlog');
+		const mainContent = document.querySelector('.main-content');
+		let colorMode = null;
+		let editingPostId = null;
+
+		btnApp.addEventListener('click', () => {
+			appDropdown.classList.toggle('open');
+		});
+
+		if (btnGame && gameDropdown) {
+			btnGame.addEventListener('click', () => {
+				gameDropdown.classList.toggle('open');
+			});
+		}
+
+		btnBlog.classList.add('active');
+		panelBlog.classList.add('active');
+		mainContent.classList.add('blog-active');
+
+		function formatDateTime(isoDate) {
+			return new Date(isoDate).toLocaleString('fr-CA', {
+				dateStyle: 'medium',
+				timeStyle: 'short'
+			});
+		}
+
+		function saveBlog() {
+			localStorage.setItem(BLOG_KEY, JSON.stringify(blogPosts));
+		}
+
+		function vote(postId, optionIndex) {
+			const target = blogPosts.find(post => post.id === postId);
+			if (!target || !target.poll || !target.poll[optionIndex]) return;
+			target.poll[optionIndex].votes += 1;
+			saveBlog();
+			renderBlog();
+		}
+
+		function createBlogCard(post) {
+			const card = document.createElement('article');
+			card.className = 'card';
+
+			const pollHtml = post.poll && post.poll.length
+				? `
+				<div class="poll">
+					<strong>Poll</strong>
+					${post.poll.map((opt, index) => `
+						<div class="poll-option">
+							<span>${opt.label} (${opt.votes} vote${opt.votes > 1 ? 's' : ''})</span>
+							<button class="vote-btn" type="button" data-post-id="${post.id}" data-opt-index="${index}">Voter</button>
+						</div>
+					`).join('')}
+				</div>
+				`
+				: '';
+
+			const linkHtml = post.link
+				? `<a class="post-link" href="${post.link}" target="_blank" rel="noopener noreferrer">${post.link}</a>`
+				: '';
+
+			const imageHtml = post.image
+				? `<img class="post-image" src="${post.image}" alt="Image du post">`
+				: '';
+
+			card.innerHTML = `
+				<div class="card-head">
+					<strong>${post.author}</strong>
+					<div class="card-head-right">
+						<span class="meta">${formatDateTime(post.createdAt)}</span>
+						<button class="btn-edit-post" type="button" data-edit-id="${post.id}">📝</button>
+						<button class="btn-delete-post" type="button" data-delete-id="${post.id}">X</button>
+					</div>
+				</div>
+				<div class="post-comment">${post.comment ? post.comment : '<span class="empty">Aucun commentaire.</span>'}</div>
+				${linkHtml}
+				${imageHtml}
+				${pollHtml}
+			`;
+
+			const editButton = card.querySelector('[data-edit-id]');
+			if (editButton) {
+				editButton.addEventListener('click', () => {
+					const postId = Number(editButton.getAttribute('data-edit-id'));
+					startEditPost(postId);
+				});
+			}
+
+			const deleteButton = card.querySelector('[data-delete-id]');
+			if (deleteButton) {
+				deleteButton.addEventListener('click', () => {
+					const postId = Number(deleteButton.getAttribute('data-delete-id'));
+					blogPosts = blogPosts.filter(postItem => postItem.id !== postId);
+					saveBlog();
+					renderBlog();
+				});
+			}
+
+			card.querySelectorAll('.vote-btn').forEach(button => {
+				button.addEventListener('click', () => {
+					const postId = Number(button.getAttribute('data-post-id'));
+					const optionIndex = Number(button.getAttribute('data-opt-index'));
+					vote(postId, optionIndex);
+				});
+			});
+
+			return card;
+		}
+
+		function renderBlog() {
+			const blogList = document.getElementById('blogList');
+			blogList.innerHTML = '';
+
+			if (!blogPosts.length) {
+				blogList.innerHTML = '<div class="empty">Aucun post pour le moment.</div>';
+				return;
+			}
+
+			const orderedPosts = [...blogPosts].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+			orderedPosts.forEach(post => blogList.appendChild(createBlogCard(post)));
+		}
+
+		function startEditPost(postId) {
+			const post = blogPosts.find(item => item.id === postId);
+			if (!post) return;
+
+			document.getElementById('blogAuthor').value = post.author || '';
+			document.getElementById('blogComment').value = post.comment || '';
+			editingPostId = postId;
+			document.getElementById('addBlogPostBtn').title = 'Mettre à jour';
+			document.getElementById('addBlogPostBtn').textContent = '📨';
+			document.getElementById('blogComment').focus();
+		}
+
+		function insertInComment(text, selectionStartOffset = null, selectionEndOffset = null) {
+			const editor = document.getElementById('blogComment');
+			const start = editor.selectionStart;
+			const end = editor.selectionEnd;
+			const before = editor.value.substring(0, start);
+			const selected = editor.value.substring(start, end);
+			const after = editor.value.substring(end);
+			const insertedText = text.includes('{selected}') ? text.replace('{selected}', selected || 'texte') : text;
+
+			editor.value = before + insertedText + after;
+			editor.focus();
+
+			if (typeof selectionStartOffset === 'number' && typeof selectionEndOffset === 'number') {
+				editor.setSelectionRange(start + selectionStartOffset, start + selectionEndOffset);
+			} else {
+				const cursor = start + insertedText.length;
+				editor.setSelectionRange(cursor, cursor);
+			}
+		}
+
+		function wrapSelectionWithTag(startTag, endTag) {
+			insertInComment(`${startTag}{selected}${endTag}`);
+		}
+
+		function applyToolbarAction(action) {
+			switch (action) {
+				case 'bold':
+					wrapSelectionWithTag('<b>', '</b>');
+					break;
+				case 'italic':
+					wrapSelectionWithTag('<i>', '</i>');
+					break;
+				case 'underline':
+					wrapSelectionWithTag('<u>', '</u>');
+					break;
+				case 'strike':
+					wrapSelectionWithTag('<s>', '</s>');
+					break;
+				case 'textColor': {
+					openColorPicker('text');
+					break;
+				}
+				case 'bgColor': {
+					openColorPicker('background');
+					break;
+				}
+				case 'orderedList':
+					insertInComment('<ol>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ol>');
+					break;
+				case 'unorderedList':
+					insertInComment('<ul>\n  <li>Point 1</li>\n  <li>Point 2</li>\n</ul>');
+					break;
+				case 'alignLeft':
+					wrapSelectionWithTag('<p style="text-align: left;">', '</p>');
+					break;
+				case 'alignCenter':
+					wrapSelectionWithTag('<p style="text-align: center;">', '</p>');
+					break;
+				case 'alignRight':
+					wrapSelectionWithTag('<p style="text-align: right;">', '</p>');
+					break;
+				case 'insertLink':
+					insertInComment('<a href="https://" target="_blank">Texte du lien</a>', 9, 17);
+					break;
+				case 'insertImage':
+					insertInComment('<img src="https://" alt="Image">', 10, 18);
+					break;
+				case 'insertPoll':
+					insertInComment('<div class="poll">\n  <strong>Poll</strong>\n  <ul>\n    <li>Option 1</li>\n    <li>Option 2</li>\n  </ul>\n</div>');
+					break;
+				default:
+					break;
+			}
+		}
+
+		function toggleToolbar() {
+			const toolbar = document.getElementById('blogToolbar');
+			const button = document.getElementById('toggleToolbarBtn');
+			const isCollapsed = toolbar.classList.toggle('collapsed');
+			button.textContent = '🔧';
+			button.title = isCollapsed ? 'Afficher outils' : 'Replier outils';
+		}
+
+		function collapseComposerCard() {
+			document.getElementById('blogComposerCard').classList.add('collapsed');
+			document.getElementById('panelBlog').classList.add('composer-collapsed');
+		}
+
+		function expandComposerCard() {
+			document.getElementById('blogComposerCard').classList.remove('collapsed');
+			document.getElementById('panelBlog').classList.remove('composer-collapsed');
+		}
+
+		function openColorPicker(mode) {
+			colorMode = mode;
+			document.getElementById('colorPickerTitle').textContent = mode === 'text' ? 'Couleur du texte' : 'Couleur arrière texte';
+			document.getElementById('colorPickerModal').classList.add('show');
+		}
+
+		function applyColorSelection() {
+			const color = document.getElementById('colorPickerInput').value;
+			if (colorMode === 'text') {
+				wrapSelectionWithTag(`<span style="color: ${color};">`, '</span>');
+			}
+			if (colorMode === 'background') {
+				wrapSelectionWithTag(`<span style="background-color: ${color};">`, '</span>');
+			}
+			closeColorPicker();
+		}
+
+		function closeColorPicker() {
+			document.getElementById('colorPickerModal').classList.remove('show');
+			colorMode = null;
+		}
+
+		function addBlogPost() {
+			const authorInput = document.getElementById('blogAuthor');
+			const commentInput = document.getElementById('blogComment');
+
+			const author = authorInput.value.trim() || 'Anonymous';
+			const comment = commentInput.value.trim();
+
+			if (!comment) {
+				alert('Ajoutez au moins un commentaire.');
+				return;
+			}
+
+			if (editingPostId) {
+				blogPosts = blogPosts.map(item => {
+					if (item.id !== editingPostId) return item;
+					return {
+						...item,
+						author,
+						comment
+					};
+				});
+			} else {
+				blogPosts.push({
+					id: Date.now(),
+					author,
+					comment,
+					createdAt: new Date().toISOString()
+				});
+			}
+
+			saveBlog();
+			renderBlog();
+
+			authorInput.value = '';
+			commentInput.value = '';
+			editingPostId = null;
+			document.getElementById('addBlogPostBtn').title = 'Publier';
+			document.getElementById('blogPreviewModal').classList.remove('show');
+			document.getElementById('blogPreviewContent').innerHTML = '';
+		}
+
+		function previewBlogPost() {
+			const commentInput = document.getElementById('blogComment');
+			const previewModal = document.getElementById('blogPreviewModal');
+			const previewContent = document.getElementById('blogPreviewContent');
+			const html = commentInput.value.trim();
+
+			if (!html) {
+				previewModal.classList.remove('show');
+				previewContent.innerHTML = '';
+				return;
+			}
+
+			previewContent.innerHTML = html;
+			previewModal.classList.add('show');
+		}
+
+		document.getElementById('addBlogPostBtn').addEventListener('click', addBlogPost);
+		document.getElementById('collapseComposerBtn').addEventListener('click', collapseComposerCard);
+		document.getElementById('expandComposerBtn').addEventListener('click', expandComposerCard);
+		document.getElementById('toggleToolbarBtn').addEventListener('click', toggleToolbar);
+		document.getElementById('previewBlogPostBtn').addEventListener('click', previewBlogPost);
+		document.getElementById('closeBlogPreviewBtn').addEventListener('click', () => {
+			document.getElementById('blogPreviewModal').classList.remove('show');
+		});
+
+		document.getElementById('blogPreviewModal').addEventListener('click', (event) => {
+			if (event.target.id === 'blogPreviewModal') {
+				event.currentTarget.classList.remove('show');
+			}
+		});
+		document.getElementById('applyColorBtn').addEventListener('click', applyColorSelection);
+		document.getElementById('cancelColorBtn').addEventListener('click', closeColorPicker);
+		document.getElementById('colorPickerModal').addEventListener('click', (event) => {
+			if (event.target.id === 'colorPickerModal') {
+				closeColorPicker();
+			}
+		});
+
+		document.querySelectorAll('#blogToolbar [data-action]').forEach(button => {
+			button.addEventListener('click', () => applyToolbarAction(button.getAttribute('data-action')));
+		});
+
+		renderBlog();
+
+		const canvas = document.getElementById('star-canvas');
+		const ctx = canvas.getContext('2d');
+		const starColors = ['#ffffff', '#3498db', '#f1c40f', '#e74c3c', '#9b59b6', '#2ecc71'];
+		const stars = [];
+		const numStars = 120;
+
+		function resizeCanvas() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+
+		class Star {
+			constructor() {
+				this.reset();
+			}
+
+			reset() {
+				this.x = Math.random() * canvas.width;
+				this.y = Math.random() * canvas.height;
+				this.size = Math.random() * 2 + 0.5;
+				this.color = starColors[Math.floor(Math.random() * starColors.length)];
+				this.speed = Math.random() * 0.4 + 0.1;
+				this.angle = Math.random() * Math.PI * 2;
+			}
+
+			update() {
+				this.x += Math.cos(this.angle) * this.speed;
+				this.y += Math.sin(this.angle) * this.speed;
+
+				if (this.x < 0) this.x = canvas.width;
+				if (this.x > canvas.width) this.x = 0;
+				if (this.y < 0) this.y = canvas.height;
+				if (this.y > canvas.height) this.y = 0;
+			}
+
+			draw() {
+				ctx.beginPath();
+				ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+				ctx.fillStyle = this.color;
+				ctx.shadowBlur = 5;
+				ctx.shadowColor = this.color;
+				ctx.fill();
+			}
+		}
+
+		function animateStars() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			stars.forEach(star => {
+				star.update();
+				star.draw();
+			});
+			requestAnimationFrame(animateStars);
+		}
+
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
+		for (let i = 0; i < numStars; i++) stars.push(new Star());
+		animateStars();
+	</script>
+</body>
+</html>
